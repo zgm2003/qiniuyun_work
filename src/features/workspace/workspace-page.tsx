@@ -1,7 +1,7 @@
 "use client";
 
 import { type ChangeEvent, useRef } from "react";
-import type { ProviderName } from "./workspace-context";
+import { UiSelect } from "@/components/ui/select";
 import { useWorkspace } from "./workspace-context";
 import { PRODUCT_PROVIDER_OPTIONS } from "./provider-options";
 
@@ -90,20 +90,12 @@ export function WorkspacePage() {
             </div>
 
             <div className="model-grid">
-              <label>
-                <span>Provider</span>
-                <select
-                  className="provider-select"
-                  value={workspace.provider}
-                  onChange={(event) => workspace.setProvider(event.target.value as ProviderName)}
-                >
-                  {PRODUCT_PROVIDER_OPTIONS.map((option) => (
-                    <option value={option.value} key={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <UiSelect
+                label="Provider"
+                value={workspace.provider}
+                options={PRODUCT_PROVIDER_OPTIONS}
+                onChange={workspace.setProvider}
+              />
 
               <label>
                 <span>Temperature</span>
