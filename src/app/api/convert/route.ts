@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { convertNovelToScript } from "@/lib/mock-converter";
+import { convertNovelWithProvider } from "@/lib/ai-provider";
 
 const ConvertRequestSchema = z.object({
   title: z.string().min(1, "标题不能为空"),
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = convertNovelToScript(parsed.data);
+    const result = await convertNovelWithProvider(parsed.data);
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "转换失败";

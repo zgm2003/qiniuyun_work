@@ -7,7 +7,7 @@ export type NovelConversionInput = {
 };
 
 export type ConversionReport = {
-  provider: "mock";
+  provider: "mock" | "openai-compatible";
   chapterCount: number;
   characterCount: number;
   sceneCount: number;
