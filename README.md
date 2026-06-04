@@ -9,6 +9,7 @@
 ## 已实现功能
 
 - 章节识别：支持 `第1章`、`第一章`、`Chapter 1` 等标题。
+- 章节大纲预览：转换前展示识别到的章节标题、字数和正文预览。
 - 输入校验：少于 3 个章节直接报错，不生成假结果。
 - 剧本生成：默认使用确定性 mock provider，可无 API Key 完整演示。
 - 真实 AI 接口：配置 `AI_PROVIDER=openai-compatible` 后调用 OpenAI 兼容 Chat Completions API。
@@ -24,6 +25,7 @@
 本项目原创部分包括：
 
 - 小说章节切分逻辑。
+- 章节大纲预览数据结构和展示逻辑。
 - 剧本 YAML Schema 设计。
 - YAML 运行时校验和错误路径展示。
 - mock 剧本转换器。
@@ -116,7 +118,7 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 1. 启动项目：`npm run dev`。
 2. 打开首页。
 3. 点击“加载样例”。
-4. 确认页面显示已识别 3 章。
+4. 确认“章节大纲预览”显示 3 章、每章标题、字数和正文预览。
 5. 展示“模型配置”面板：默认 `mock`，也可切到 `openai-compatible` 输入一次性 API Key。
 6. 点击“转换为 YAML 剧本”。
 7. 展示生成的 YAML、角色、场景、台词统计。
@@ -148,6 +150,7 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 10. `fix: harden openai compatible provider contract`
 11. `fix: accept mislabeled provider json responses`
 12. `feat: add local project drafts`
+13. `feat: add chapter outline preview`
 
 ## PR 规范
 
