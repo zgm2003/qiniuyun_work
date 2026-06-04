@@ -1,0 +1,32 @@
+:root {
+  color-scheme: dark;
+  --ink: #f5efe3;
+  --muted: #b9aa95;
+  --paper: #16130f;
+  --panel: #241d16;
+  --line: #4c3d2c;
+  --accent: #e8a23d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(circle at top left, #3b2817, var(--paper) 38rem);
+  color: var(--ink);
+  font-family: Georgia, "Songti SC", "SimSun", serif;
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
