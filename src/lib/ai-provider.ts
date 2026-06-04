@@ -26,6 +26,19 @@ export type RequestModelConfig = {
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_MODEL = "gpt-4.1-mini";
 
+function normalizeOpenAIBaseUrl(rawBaseUrl: string): string {
+  const baseUrl = rawBaseUrl.trim().replace(/\/+$/, "");
+  if (!baseUrl) {
+    return DEFAULT_BASE_URL;
+  }
+
+  if (/\/v\d+$/i.test(baseUrl)) {
+    return baseUrl;
+  }
+
+  return `${baseUrl}/v1`;
+}
+
 function stripYamlFence(content: string): string {
   const trimmed = content.trim();
   const fenced = trimmed.match(/^```(?:yaml|yml)?\s*\n([\s\S]*?)\n```$/i);
@@ -55,20 +68,90 @@ function buildPrompt(input: NovelConversionInput): string {
   const chapters = parseNovelChapters(input.text);
   requireMinimumChapters(chapters, 3);
 
-  return `你是小说改编剧本助手。请把下面小说改编成严格 YAML，不要输出解释文字。
+  return `你是小说改编剧本助手。请把下面小说改编成严格 YAML，不要输出解释文字，不要 Markdown 代码块。
 
 硬性要求：
-- metadata.source_chapters 必须是 ${chapters.length}
 - 顶层只能包含 metadata、characters、scenes、summary
+- metadata 必须包含 title、source_chapters、language、format_version
+- metadata.title 必须是 "${input.title}"
+- metadata.source_chapters 必须是 ${chapters.length}
+- metadata.language 必须是 "zh-CN"
+- metadata.format_version 必须是 "1.0"
+- characters 必须是数组，每个角色必须包含 id、name、role、traits
+- characters[*].id 使用 char_001、char_002 这种稳定 ID
+- characters[*].role 只能是 protagonist、antagonist、supporting、narrator、other
+- characters[*].traits 必须是字符串数组，至少 1 项
 - 每个 scene 必须包含 id、chapter、heading、location、time、characters、action、dialogue、camera_notes
+- scenes[*].id 使用 scene_001、scene_002 这种稳定 ID
+- scenes[*].characters 必须引用 characters[*].id，不要直接写角色名
 - dialogue 至少一条，每条包含 character、line、emotion
-- characters 中的 role 只能是 protagonist、antagonist、supporting、narrator、other
+- dialogue[*].character 必须引用 characters[*].id
+- summary 必须是对象，必须包含 logline、themes、adaptation_notes
+- summary.themes 必须是字符串数组
+- summary.adaptation_notes 必须是字符串数组
+- 禁止把 summary 输出成字符串
 - 不知道的内容也要根据小说合理改编，但不能省略必填字段
+- 所有必填字段都必须输出；不要省略 language、format_version、id、traits、summary
 
-标题：${input.title}
+必须严格参考这个 YAML 形状：
+metadata:
+  title: "${input.title}"
+  source_chapters: ${chapters.length}
+  language: "zh-CN"
+  format_version: "1.0"
+characters:
+  - id: "char_001"
+    name: "角色名"
+    role: "protagonist"
+    traits:
+      - "性格特征"
+scenes:
+  - id: "scene_001"
+    chapter: 1
+    heading: "场景标题"
+    location: "地点"
+    time: "时间"
+    characters:
+      - "char_001"
+    action: "动作描述"
+    dialogue:
+      - character: "char_001"
+        line: "台词"
+        emotion: "情绪"
+    camera_notes: "镜头或舞台提示"
+summary:
+  logline: "一句话故事梗概"
+  themes:
+    - "主题"
+  adaptation_notes:
+    - "改编说明"
 
 小说：
 ${input.text}`;
+}
+
+async function readOpenAICompatiblePayload(response: Response): Promise<{
+  choices?: Array<{ message?: { content?: string } }>;
+}> {
+  const contentType = response.headers.get("content-type") ?? "";
+  const bodyText = await response.text();
+  const preview = bodyText.trim().replace(/\s+/g, " ").slice(0, 160);
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    if (contentType.toLowerCase().includes("text/html") || bodyText.trimStart().startsWith("<")) {
+      throw new Error(`AI 服务返回了 HTML 页面，不是 JSON。请检查 Base URL 是否应以 /v1 结尾。响应预览：${preview}`);
+    }
+
+    throw new Error(`AI 服务返回的 Content-Type 不是 JSON：${contentType || "unknown"}。响应预览：${preview}`);
+  }
+
+  try {
+    return JSON.parse(bodyText) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+  } catch {
+    throw new Error(`AI 服务返回了无法解析的 JSON。响应预览：${preview}`);
+  }
 }
 
 async function convertWithOpenAICompatible(
@@ -82,7 +165,7 @@ async function convertWithOpenAICompatible(
     throw new Error("OPENAI_COMPATIBLE_API_KEY 未配置");
   }
 
-  const baseUrl = (modelConfig?.baseUrl ?? env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
+  const baseUrl = normalizeOpenAIBaseUrl(modelConfig?.baseUrl ?? env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_BASE_URL);
   const model = modelConfig?.model ?? env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_MODEL;
   const temperature = modelConfig?.temperature ?? 0.2;
   const response = await fetchImpl(`${baseUrl}/chat/completions`, {
@@ -111,9 +194,7 @@ async function convertWithOpenAICompatible(
     throw new Error(`AI 服务请求失败：${response.status}`);
   }
 
-  const payload = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
+  const payload = await readOpenAICompatiblePayload(response);
   const content = payload.choices?.[0]?.message?.content;
   if (!content) {
     throw new Error("AI 服务没有返回剧本内容");
