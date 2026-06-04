@@ -30,8 +30,8 @@ http://localhost:3000
 
 - 输入输出稳定，适合三天内持续交付。
 - YAML 剧本可以被校验、编辑和导出。
-- mock provider 保证无 API Key 也能录屏。
-- OpenAI-compatible provider 保留真实模型能力。
+- 产品界面只接入 OpenAI-compatible 真实模型能力。
+- 测试用确定性转换器只服务自动测试、CI 和样例输出，不作为用户入口。
 
 ### 2. 导入小说
 
@@ -63,9 +63,8 @@ samples/novel-3chapters.txt
 
 展示“模型配置”区域：
 
-- 默认 `mock`，适合稳定演示。
-- 可以切换到 `openai-compatible`。
 - 可以填写 base URL、model、temperature、一次性 API Key。
+- Provider 面向 OpenAI-compatible，不暴露测试用 provider。
 
 强调：
 
@@ -144,14 +143,12 @@ docs/script-yaml-schema.md
 
 ## 真实 API 演示建议
 
-如果要演示真实模型：
+真实 API 演示建议：
 
-1. 先用 mock 完整跑通一遍。
-2. 再切换到 `openai-compatible`。
-3. 填写 base URL、model、API Key。
-4. 如果真实模型输出未通过 Schema，直接说明：系统会拒绝坏 YAML，而不是悄悄兜底。
-
-录屏主线不要依赖真实 API。真实 API 可以作为加分项，不要作为唯一演示路径。
+1. 提前准备可用的 OpenAI-compatible base URL、model 和 API Key。
+2. 录屏时不要展示完整 API Key。
+3. 如果真实模型输出未通过 Schema，直接说明：系统会拒绝坏 YAML，而不是悄悄兜底。
+4. 如需稳定演示结构，可展示 `samples/output.yaml` 或测试结果，但不要把测试用 provider 当成产品能力。
 
 ## 避免录屏翻车
 
@@ -160,7 +157,7 @@ docs/script-yaml-schema.md
 - 不要临时修改代码。
 - 不要删除 `samples/novel-3chapters.txt`。
 - 如果端口 3000 被占用，先关闭其他项目。
-- 如果真实模型失败，切回 mock provider。
+- 如果真实模型失败，展示错误信息和 Schema 保护机制，不要切到测试用 provider 伪装真实生成。
 
 ## 最终交付一句话
 

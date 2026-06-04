@@ -11,15 +11,15 @@ npm run dev
 
 ## 演示主线
 
-1. 展示首页标题和 Provider 卡片，说明默认使用 `mock`，无 API Key 也能稳定演示。
+1. 展示首页和多路由导航，说明产品界面只面向真实 OpenAI-compatible provider。
 2. 点击“导入文本”，选择 `samples/novel-3chapters.txt`；如果现场不方便选文件，可以点击“加载样例”恢复同一类输入。
 3. 指出标题由文件名生成，且“章节大纲预览”识别出 3 个章节，显示每章标题、字数和正文预览。
-4. 展示“模型配置”面板：默认 provider 是 `mock`。
-5. 切到 `openai-compatible`，说明可以填写 base URL、model、temperature 和一次性 API Key；再切回 `mock` 保持录屏稳定。
+4. 展示“模型配置”面板：Provider 为 OpenAI-compatible，不再暴露测试用 provider。
+5. 填写 base URL、model、temperature 和一次性 API Key；说明 API Key 只用于本次请求。
 6. 点击“转换为 YAML 剧本”。
-7. 展示右侧 YAML：包含 `metadata`、`characters`、`scenes`、`summary`。
+7. 切到“剧本审查”，展示 YAML 包含 `metadata`、`characters`、`scenes`、`summary`。
 8. 展示“剧本质量清单”：Schema、元信息、角色、场景、台词、引用、总结全部通过。
-9. 展示底部转换总结：章节、角色、场景、台词数量。
+9. 切到“质量报告”，展示章节、角色、场景、台词数量。
 10. 点击“保存为新草稿”，说明草稿只保存在当前浏览器。
 11. 刷新页面，展示草稿列表仍然存在。
 12. 点击“加载”，恢复标题、小说正文、YAML 和转换报告。
@@ -38,7 +38,7 @@ npm run dev
 - 剧本质量清单是结构交付检查，不是 AI 主观剧情评分。
 - 少于 3 个章节会直接拒绝，不生成假结果。
 - 缺字段不使用空字符串兜底，避免掩盖 AI 输出错误。
-- mock provider 保证现场稳定，OpenAI-compatible provider 保留真实 AI 能力。
+- 产品界面只暴露真实 OpenAI-compatible provider；确定性转换器只保留给测试、CI 和样例输出。
 - 模型配置是单次请求配置，API Key 不保存到仓库，也不写入 localStorage。
 - 本地草稿保存的是作品状态，不保存 API Key、Base URL、model、provider 或 temperature。
 

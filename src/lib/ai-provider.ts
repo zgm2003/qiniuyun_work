@@ -1,4 +1,5 @@
 import { parseNovelChapters, requireMinimumChapters } from "./chapters";
+import { DEFAULT_OPENAI_BASE_URL, normalizeOpenAIBaseUrl } from "./openai-compatible";
 import {
   validateScriptYaml,
   type ScriptDocument,
@@ -23,21 +24,7 @@ export type RequestModelConfig = {
   temperature?: number;
 };
 
-const DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_MODEL = "gpt-4.1-mini";
-
-function normalizeOpenAIBaseUrl(rawBaseUrl: string): string {
-  const baseUrl = rawBaseUrl.trim().replace(/\/+$/, "");
-  if (!baseUrl) {
-    return DEFAULT_BASE_URL;
-  }
-
-  if (/\/v\d+$/i.test(baseUrl)) {
-    return baseUrl;
-  }
-
-  return `${baseUrl}/v1`;
-}
 
 function stripYamlFence(content: string): string {
   const trimmed = content.trim();
@@ -161,7 +148,7 @@ async function convertWithOpenAICompatible(
     throw new Error("OPENAI_COMPATIBLE_API_KEY 未配置");
   }
 
-  const baseUrl = normalizeOpenAIBaseUrl(modelConfig?.baseUrl ?? env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_BASE_URL);
+  const baseUrl = normalizeOpenAIBaseUrl(modelConfig?.baseUrl ?? env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_OPENAI_BASE_URL);
   const model = modelConfig?.model ?? env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_MODEL;
   const temperature = modelConfig?.temperature ?? 0.2;
   const response = await fetchImpl(`${baseUrl}/chat/completions`, {

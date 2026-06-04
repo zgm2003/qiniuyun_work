@@ -9,7 +9,7 @@
 | 1 | docs/chore | project direction + scaffold | 明确选题方向，初始化 Next.js/TypeScript 工程。 |
 | 2 | feat | chapter parsing | 识别 3 章以上小说输入，少于 3 章直接拒绝。 |
 | 3 | feat | script YAML schema | 定义 YAML 剧本结构和运行时校验。 |
-| 4 | feat | deterministic converter | 加入 mock provider，保证无 API Key 稳定演示。 |
+| 4 | feat | deterministic converter | 加入测试用确定性转换器，保证 CI 和样例输出稳定。 |
 | 5 | feat | novel-to-script interface | 完成输入、转换、编辑、校验、导出闭环。 |
 | 6 | feat | AI provider selection | 接入 mock / OpenAI-compatible provider。 |
 | 7 | docs | demo and PR workflow | 补录屏脚本、依赖说明、原创功能说明。 |
@@ -26,7 +26,7 @@
 
 - 每个 PR 只做一件事。
 - 每个功能 PR 先写可测试的纯函数，再接 UI。
-- 真实 AI 能力不能破坏默认 mock 演示。
+- 产品 UI 不暴露测试用 provider；确定性转换器只用于测试、CI 和样例输出。
 - API Key 不写仓库，不存 localStorage 草稿。
 - 每次合并回 `main` 后都运行：
 
@@ -50,6 +50,13 @@ npm run build
 | 6 | feat | AI provider settings | 将 AI 供应商、模型、健康检查从单次配置升级为可管理资源。 |
 | 7 | feat | prompt template management | 将硬编码提示词迁移为可配置模板，并保留 Schema 校验硬约束。 |
 
+## 产品化阶段已推进
+
+| 序号 | 类型 | 标题 | 作用 |
+| --- | --- | --- | --- |
+| P1 | docs | product architecture and style guideline | 明确产品化架构边界和后续 UI 改动规则。 |
+| P2 | refactor/style | routed workspace shell | 将拥挤单页拆成 `/workspace`、`/script`、`/drafts`、`/report`，并调整为中性 SaaS / 管理台风格。 |
+
 ## 当前最终演示链路
 
 ```text
@@ -57,7 +64,7 @@ npm run build
 ↓
 章节解析 + 大纲预览
 ↓
-选择 mock 或 OpenAI-compatible 模型
+配置 OpenAI-compatible 模型
 ↓
 生成 YAML 剧本
 ↓
