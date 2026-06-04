@@ -10,6 +10,7 @@
 
 - 章节识别：支持 `第1章`、`第一章`、`Chapter 1` 等标题。
 - 章节大纲预览：转换前展示识别到的章节标题、字数和正文预览。
+- 本地文本导入：支持浏览器本地导入 `.txt` / `.md` 小说文本，不上传服务器。
 - 输入校验：少于 3 个章节直接报错，不生成假结果。
 - 剧本生成：默认使用确定性 mock provider，可无 API Key 完整演示。
 - 真实 AI 接口：配置 `AI_PROVIDER=openai-compatible` 后调用 OpenAI 兼容 Chat Completions API。
@@ -27,6 +28,7 @@
 
 - 小说章节切分逻辑。
 - 章节大纲预览数据结构和展示逻辑。
+- 本地文本导入校验和文件名标题推导。
 - 剧本 YAML Schema 设计。
 - YAML 运行时校验和错误路径展示。
 - 剧本结构质量清单，不做 AI 主观剧情评分。
@@ -43,7 +45,7 @@
 
 ## 后续 Roadmap
 
-当前版本是 MVP，不是最终产品。后续增强方向包括局部重写、质量评分、文件导入、登录系统、管理端、团队协作和异步任务队列。
+当前版本是 MVP，不是最终产品。后续增强方向包括局部重写、质量评分、登录系统、管理端、团队协作和异步任务队列。
 
 详细 TODO 见 `docs/future-roadmap.md`。
 
@@ -105,6 +107,15 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 
 页面上的“模型配置”面板可以覆盖 `.env` 中的 provider/base URL/model/temperature。API Key 只随本次 `/api/convert` 请求发送，不写入仓库，也不进入 localStorage 草稿。
 
+## 本地文本导入
+
+页面支持导入 `.txt` / `.md` 小说文本：
+
+- 文件只在浏览器本地读取，不上传服务器。
+- 文件名会自动作为标题来源，例如 `雨夜来信.txt` 会生成标题 `雨夜来信`。
+- 导入后会清空旧 YAML 和转换报告，避免旧输出和新输入混在一起。
+- 当前文件大小限制为 512KB。
+
 ## 本地项目草稿
 
 页面提供“本地项目草稿”区域，支持：
@@ -119,8 +130,8 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 
 1. 启动项目：`npm run dev`。
 2. 打开首页。
-3. 点击“加载样例”。
-4. 确认“章节大纲预览”显示 3 章、每章标题、字数和正文预览。
+3. 点击“导入文本”，选择 `samples/novel-3chapters.txt`；也可点击“加载样例”快速恢复。
+4. 确认标题由文件名生成，且“章节大纲预览”显示 3 章、每章标题、字数和正文预览。
 5. 展示“模型配置”面板：默认 `mock`，也可切到 `openai-compatible` 输入一次性 API Key。
 6. 点击“转换为 YAML 剧本”。
 7. 展示生成的 YAML、Schema 校验和“剧本质量清单”全部通过。
@@ -155,6 +166,7 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 12. `feat: add local project drafts`
 13. `feat: add chapter outline preview`
 14. `feat: add script quality checklist`
+15. `feat: add novel text file import`
 
 ## PR 规范
 
