@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { buildChapterOutline } from "@/lib/chapter-outline";
 import { parseNovelChapters } from "@/lib/chapters";
 import { SAMPLE_NOVEL, SAMPLE_TITLE } from "@/lib/demo-sample";
 import {
@@ -106,6 +107,7 @@ export default function Home() {
   const drafts = useSyncExternalStore(subscribeLocalDrafts, getLocalDraftsSnapshot, getServerDraftsSnapshot);
 
   const chapters = useMemo(() => parseNovelChapters(novelText), [novelText]);
+  const chapterOutline = useMemo(() => buildChapterOutline(chapters), [chapters]);
   const yamlValidation = useMemo(() => {
     if (!yamlText.trim()) {
       return null;
@@ -206,7 +208,7 @@ export default function Home() {
     URL.revokeObjectURL(url);
   }
 
-  const canConvert = title.trim().length > 0 && novelText.trim().length > 0 && chapters.length >= 3;
+  const canConvert = title.trim().length > 0 && novelText.trim().length > 0 && chapterOutline.ready;
   const validationText = yamlValidation
     ? yamlValidation.ok
       ? "Schema 校验通过，可以导出。"
@@ -214,6 +216,9 @@ export default function Home() {
     : "转换后会在这里显示 YAML Schema 校验结果。";
   const activeProviderText = report?.provider ?? provider;
   const activeDraft = drafts.find((draft) => draft.id === activeDraftId);
+  const outlineStatusText = chapterOutline.ready
+    ? `已达到最低 ${chapterOutline.minimumChapters} 章要求`
+    : `还差 ${chapterOutline.missingChapterCount} 章`;
 
   return (
     <main className="app-shell">
@@ -340,9 +345,39 @@ export default function Home() {
             spellCheck={false}
           />
 
+          <div className="chapter-outline-card" aria-label="章节大纲预览">
+            <div className="chapter-outline-head">
+              <div>
+                <p className="section-kicker">Chapter Outline</p>
+                <h3>章节大纲预览</h3>
+              </div>
+              <span className={chapterOutline.ready ? "outline-pill ok" : "outline-pill bad"}>
+                {outlineStatusText}
+              </span>
+            </div>
+
+            {chapterOutline.items.length > 0 ? (
+              <ol className="chapter-outline-list">
+                {chapterOutline.items.map((item) => (
+                  <li className={item.isEmpty ? "chapter-outline-item empty" : "chapter-outline-item"} key={item.index}>
+                    <div className="chapter-outline-meta">
+                      <strong>
+                        第 {item.index} 章 · {item.title}
+                      </strong>
+                      <span>{item.bodyCharacterCount} 字</span>
+                    </div>
+                    <p>{item.isEmpty ? "章节正文为空，转换前需要补正文。" : item.preview}</p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="empty-outline">还没有识别到章节。支持“第1章”“第一章”“Chapter 1”等标题格式。</p>
+            )}
+          </div>
+
           <div className="status-row">
-            <span className={chapters.length >= 3 ? "status ok" : "status bad"}>
-              已识别 {chapters.length} 章
+            <span className={chapterOutline.ready ? "status ok" : "status bad"}>
+              已识别 {chapterOutline.chapterCount} 章 · {outlineStatusText}
             </span>
             <button className="primary-button" type="button" disabled={!canConvert || isPending} onClick={convert}>
               {isPending ? "转换中..." : "转换为 YAML 剧本"}
