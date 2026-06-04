@@ -71,6 +71,8 @@ Schema 校验 + 剧本质量清单
 
 详细 TODO 见 `docs/future-roadmap.md`。
 
+产品化阶段的架构边界见 `docs/product-architecture.md`，后续 UI 改造需遵守 `docs/style-guideline.md`。
+
 ## 依赖
 
 运行依赖：
