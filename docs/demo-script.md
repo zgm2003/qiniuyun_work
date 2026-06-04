@@ -18,21 +18,23 @@ npm run dev
 5. 切到 `openai-compatible`，说明可以填写 base URL、model、temperature 和一次性 API Key；再切回 `mock` 保持录屏稳定。
 6. 点击“转换为 YAML 剧本”。
 7. 展示右侧 YAML：包含 `metadata`、`characters`、`scenes`、`summary`。
-8. 展示底部转换总结：章节、角色、场景、台词数量。
-9. 点击“保存为新草稿”，说明草稿只保存在当前浏览器。
-10. 刷新页面，展示草稿列表仍然存在。
-11. 点击“加载”，恢复标题、小说正文、YAML 和转换报告。
-12. 点击“删除”，说明删除草稿不会清空当前编辑区。
-13. 删除 YAML 中的 `metadata.title`。
-14. 指出 Schema 校验失败，错误定位到 `metadata.title`。
-15. 恢复 `metadata.title`。
-16. 指出 Schema 校验通过，点击“导出 YAML”。
-17. 打开 `docs/script-yaml-schema.md`，说明为什么这样设计 YAML Schema。
+8. 展示“剧本质量清单”：Schema、元信息、角色、场景、台词、引用、总结全部通过。
+9. 展示底部转换总结：章节、角色、场景、台词数量。
+10. 点击“保存为新草稿”，说明草稿只保存在当前浏览器。
+11. 刷新页面，展示草稿列表仍然存在。
+12. 点击“加载”，恢复标题、小说正文、YAML 和转换报告。
+13. 点击“删除”，说明删除草稿不会清空当前编辑区。
+14. 删除 YAML 中的 `metadata.title`。
+15. 指出 Schema 校验失败，错误定位到 `metadata.title`，质量清单也显示对应失败项。
+16. 恢复 `metadata.title`。
+17. 指出 Schema 校验通过，点击“导出 YAML”。
+18. 打开 `docs/script-yaml-schema.md`，说明为什么这样设计 YAML Schema。
 
 ## 讲解重点
 
 - 不是简单文本生成，而是输出可编辑、可校验的结构化剧本。
 - 章节大纲预览先暴露解析结果，避免用户不知道系统到底读懂了哪些章节。
+- 剧本质量清单是结构交付检查，不是 AI 主观剧情评分。
 - 少于 3 个章节会直接拒绝，不生成假结果。
 - 缺字段不使用空字符串兜底，避免掩盖 AI 输出错误。
 - mock provider 保证现场稳定，OpenAI-compatible provider 保留真实 AI 能力。

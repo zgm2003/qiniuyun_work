@@ -463,6 +463,115 @@ a {
   line-height: 1.55;
 }
 
+.quality-card {
+  margin-top: 14px;
+  border: 1px solid rgba(232, 162, 61, 0.2);
+  background:
+    linear-gradient(135deg, rgba(232, 162, 61, 0.1), transparent 55%),
+    rgba(12, 10, 8, 0.5);
+  padding: 14px;
+}
+
+.quality-card.pass {
+  border-color: rgba(143, 230, 160, 0.36);
+}
+
+.quality-card.fail {
+  border-color: rgba(255, 118, 109, 0.42);
+}
+
+.quality-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.quality-head h3 {
+  margin: 4px 0 0;
+  font-size: 21px;
+  letter-spacing: -0.035em;
+}
+
+.quality-score {
+  border: 1px solid var(--line);
+  padding: 6px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.quality-score.pass {
+  border-color: rgba(143, 230, 160, 0.45);
+  color: var(--ok);
+}
+
+.quality-score.fail {
+  border-color: rgba(255, 118, 109, 0.5);
+  color: var(--danger);
+}
+
+.quality-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quality-item {
+  border: 1px solid rgba(245, 239, 227, 0.12);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 12px;
+}
+
+.quality-item.pass {
+  border-color: rgba(143, 230, 160, 0.28);
+}
+
+.quality-item.fail {
+  border-color: rgba(255, 118, 109, 0.42);
+}
+
+.quality-item-head {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.quality-item-head strong {
+  font-size: 15px;
+}
+
+.quality-item-head span {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.quality-item.pass .quality-item-head span {
+  color: var(--ok);
+}
+
+.quality-item.fail .quality-item-head span {
+  color: var(--danger);
+}
+
+.quality-item p,
+.quality-item small {
+  display: block;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.quality-item small {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  opacity: 0.92;
+}
+
 .drafts-panel {
   margin-top: 24px;
   padding: 22px;
@@ -637,7 +746,9 @@ a {
   }
 
   .chapter-outline-head,
-  .chapter-outline-meta {
+  .chapter-outline-meta,
+  .quality-head,
+  .quality-item-head {
     align-items: flex-start;
     flex-direction: column;
   }

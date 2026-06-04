@@ -17,6 +17,7 @@
 - 本地项目草稿：可在浏览器 localStorage 保存、加载、删除当前小说/YAML/转换报告。
 - YAML Schema：使用 Zod 定义运行时 Schema，并提供设计说明文档。
 - YAML 编辑与校验：页面内编辑 YAML，实时显示 Schema 校验结果。
+- 剧本质量清单：把 Schema 与结构检查转成可读 checklist，提示哪些交付项已通过。
 - 导出：只有 YAML 校验通过时才允许导出。
 - 转换总结：展示章节数、角色数、场景数、台词数和校验状态。
 
@@ -28,6 +29,7 @@
 - 章节大纲预览数据结构和展示逻辑。
 - 剧本 YAML Schema 设计。
 - YAML 运行时校验和错误路径展示。
+- 剧本结构质量清单，不做 AI 主观剧情评分。
 - mock 剧本转换器。
 - OpenAI-compatible provider 编排。
 - 请求级模型配置，不破坏默认 mock 演示流程。
@@ -121,13 +123,14 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 4. 确认“章节大纲预览”显示 3 章、每章标题、字数和正文预览。
 5. 展示“模型配置”面板：默认 `mock`，也可切到 `openai-compatible` 输入一次性 API Key。
 6. 点击“转换为 YAML 剧本”。
-7. 展示生成的 YAML、角色、场景、台词统计。
-8. 点击“保存为新草稿”，刷新页面后加载草稿，展示本地持久化。
-9. 删除草稿，说明当前编辑区不会被清空。
-10. 手动删除 `metadata.title`，展示 Schema 校验失败。
-11. 恢复字段，展示 Schema 校验通过。
-12. 点击“导出 YAML”。
-13. 打开 `docs/script-yaml-schema.md` 说明 Schema 设计原因。
+7. 展示生成的 YAML、Schema 校验和“剧本质量清单”全部通过。
+8. 展示角色、场景、台词统计。
+9. 点击“保存为新草稿”，刷新页面后加载草稿，展示本地持久化。
+10. 删除草稿，说明当前编辑区不会被清空。
+11. 手动删除 `metadata.title`，展示 Schema 校验失败和质量清单对应失败项。
+12. 恢复字段，展示 Schema 校验通过。
+13. 点击“导出 YAML”。
+14. 打开 `docs/script-yaml-schema.md` 说明 Schema 设计原因。
 
 ## 样例文件
 
@@ -151,6 +154,7 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 11. `fix: accept mislabeled provider json responses`
 12. `feat: add local project drafts`
 13. `feat: add chapter outline preview`
+14. `feat: add script quality checklist`
 
 ## PR 规范
 
