@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { type ChangeEvent, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { buildChapterOutline } from "@/lib/chapter-outline";
 import { parseNovelChapters } from "@/lib/chapters";
 import { SAMPLE_NOVEL, SAMPLE_TITLE } from "@/lib/demo-sample";
+import { MAX_NOVEL_TEXT_IMPORT_BYTES, prepareNovelTextImport } from "@/lib/file-import";
 import {
   deleteLocalProjectDraft,
   LOCAL_PROJECT_DRAFTS_STORAGE_KEY,
@@ -109,6 +110,7 @@ export default function Home() {
   const [yamlText, setYamlText] = useState("");
   const [report, setReport] = useState<ConversionReport | null>(null);
   const [error, setError] = useState("");
+  const [sourceMessage, setSourceMessage] = useState("");
   const [draftMessage, setDraftMessage] = useState("");
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [provider, setProvider] = useState<ProviderName>("mock");
@@ -118,6 +120,7 @@ export default function Home() {
   const [apiKey, setApiKey] = useState("");
   const [isPending, startTransition] = useTransition();
   const drafts = useSyncExternalStore(subscribeLocalDrafts, getLocalDraftsSnapshot, getServerDraftsSnapshot);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const chapters = useMemo(() => parseNovelChapters(novelText), [novelText]);
   const chapterOutline = useMemo(() => buildChapterOutline(chapters), [chapters]);
@@ -136,8 +139,50 @@ export default function Home() {
     setYamlText("");
     setReport(null);
     setError("");
+    setSourceMessage("已加载样例文本，当前不绑定任何草稿。");
     setDraftMessage("已加载样例，当前不绑定任何草稿。");
     setActiveDraftId(null);
+  }
+
+  function openFileImport() {
+    fileInputRef.current?.click();
+  }
+
+  async function importNovelFile(file: File) {
+    if (file.size > MAX_NOVEL_TEXT_IMPORT_BYTES) {
+      throw new Error("文件不能超过 512KB");
+    }
+
+    const text = await file.text();
+    const imported = prepareNovelTextImport({
+      fileName: file.name,
+      size: file.size,
+      text
+    });
+
+    setTitle(imported.title);
+    setNovelText(imported.text);
+    setYamlText("");
+    setReport(null);
+    setError("");
+    setSourceMessage(`已导入 ${imported.fileName}，标题已设为“${imported.title}”。`);
+    setDraftMessage("已导入本地文本，当前不绑定任何草稿。");
+    setActiveDraftId(null);
+  }
+
+  async function handleNovelFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) {
+      return;
+    }
+
+    try {
+      await importNovelFile(file);
+    } catch (importError) {
+      const message = importError instanceof Error ? importError.message : "导入文本失败";
+      setError(message);
+    }
   }
 
   function saveDraft() {
@@ -258,9 +303,21 @@ export default function Home() {
               <p className="section-kicker">Source Novel</p>
               <h2>小说输入</h2>
             </div>
-            <button className="ghost-button" type="button" onClick={loadSample}>
-              加载样例
-            </button>
+            <div className="source-actions">
+              <button className="ghost-button" type="button" onClick={openFileImport}>
+                导入文本
+              </button>
+              <button className="ghost-button" type="button" onClick={loadSample}>
+                加载样例
+              </button>
+              <input
+                ref={fileInputRef}
+                className="visually-hidden"
+                type="file"
+                accept=".txt,.md,text/plain,text/markdown"
+                onChange={handleNovelFileChange}
+              />
+            </div>
           </div>
 
           <label className="field-label" htmlFor="title">
@@ -358,6 +415,7 @@ export default function Home() {
             onChange={(event) => setNovelText(event.target.value)}
             spellCheck={false}
           />
+          {sourceMessage ? <p className="source-message">{sourceMessage}</p> : null}
 
           <div className="chapter-outline-card" aria-label="章节大纲预览">
             <div className="chapter-outline-head">
