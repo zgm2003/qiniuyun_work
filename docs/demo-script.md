@@ -19,11 +19,15 @@ npm run dev
 6. 点击“转换为 YAML 剧本”。
 7. 展示右侧 YAML：包含 `metadata`、`characters`、`scenes`、`summary`。
 8. 展示底部转换总结：章节、角色、场景、台词数量。
-9. 删除 YAML 中的 `metadata.title`。
-10. 指出 Schema 校验失败，错误定位到 `metadata.title`。
-11. 恢复 `metadata.title`。
-12. 指出 Schema 校验通过，点击“导出 YAML”。
-13. 打开 `docs/script-yaml-schema.md`，说明为什么这样设计 YAML Schema。
+9. 点击“保存为新草稿”，说明草稿只保存在当前浏览器。
+10. 刷新页面，展示草稿列表仍然存在。
+11. 点击“加载”，恢复标题、小说正文、YAML 和转换报告。
+12. 点击“删除”，说明删除草稿不会清空当前编辑区。
+13. 删除 YAML 中的 `metadata.title`。
+14. 指出 Schema 校验失败，错误定位到 `metadata.title`。
+15. 恢复 `metadata.title`。
+16. 指出 Schema 校验通过，点击“导出 YAML”。
+17. 打开 `docs/script-yaml-schema.md`，说明为什么这样设计 YAML Schema。
 
 ## 讲解重点
 
@@ -32,6 +36,7 @@ npm run dev
 - 缺字段不使用空字符串兜底，避免掩盖 AI 输出错误。
 - mock provider 保证现场稳定，OpenAI-compatible provider 保留真实 AI 能力。
 - 模型配置是单次请求配置，API Key 不保存到仓库，也不写入 localStorage。
+- 本地草稿保存的是作品状态，不保存 API Key、Base URL、model、provider 或 temperature。
 
 ## 失败演示
 

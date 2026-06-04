@@ -13,6 +13,7 @@
 - 剧本生成：默认使用确定性 mock provider，可无 API Key 完整演示。
 - 真实 AI 接口：配置 `AI_PROVIDER=openai-compatible` 后调用 OpenAI 兼容 Chat Completions API。
 - 模型配置面板：页面可为单次转换选择 provider、base URL、model、temperature 和一次性 API Key。
+- 本地项目草稿：可在浏览器 localStorage 保存、加载、删除当前小说/YAML/转换报告。
 - YAML Schema：使用 Zod 定义运行时 Schema，并提供设计说明文档。
 - YAML 编辑与校验：页面内编辑 YAML，实时显示 Schema 校验结果。
 - 导出：只有 YAML 校验通过时才允许导出。
@@ -28,6 +29,7 @@
 - mock 剧本转换器。
 - OpenAI-compatible provider 编排。
 - 请求级模型配置，不破坏默认 mock 演示流程。
+- 浏览器本地草稿管理，不保存 API Key 和模型配置。
 - 转换 API。
 - 前端输入、转换、编辑、校验、导出闭环。
 - 示例小说、示例输出和录屏流程。
@@ -37,7 +39,7 @@
 
 ## 后续 Roadmap
 
-当前版本是 MVP，不是最终产品。后续增强方向包括模型配置面板、项目草稿管理、局部重写、质量评分、文件导入、登录系统、管理端和异步任务队列。
+当前版本是 MVP，不是最终产品。后续增强方向包括局部重写、质量评分、文件导入、登录系统、管理端、团队协作和异步任务队列。
 
 详细 TODO 见 `docs/future-roadmap.md`。
 
@@ -99,6 +101,16 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 
 页面上的“模型配置”面板可以覆盖 `.env` 中的 provider/base URL/model/temperature。API Key 只随本次 `/api/convert` 请求发送，不写入仓库，也不进入 localStorage 草稿。
 
+## 本地项目草稿
+
+页面提供“本地项目草稿”区域，支持：
+
+- 保存当前标题、小说正文、YAML 剧本和转换报告。
+- 刷新页面后从当前浏览器继续加载草稿。
+- 删除草稿但不清空当前编辑区。
+
+草稿只写入浏览器 localStorage，不上传服务端，也不保存 API Key、Base URL、model、provider 或 temperature。
+
 ## 录屏演示步骤
 
 1. 启动项目：`npm run dev`。
@@ -108,10 +120,12 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 5. 展示“模型配置”面板：默认 `mock`，也可切到 `openai-compatible` 输入一次性 API Key。
 6. 点击“转换为 YAML 剧本”。
 7. 展示生成的 YAML、角色、场景、台词统计。
-8. 手动删除 `metadata.title`，展示 Schema 校验失败。
-9. 恢复字段，展示 Schema 校验通过。
-10. 点击“导出 YAML”。
-11. 打开 `docs/script-yaml-schema.md` 说明 Schema 设计原因。
+8. 点击“保存为新草稿”，刷新页面后加载草稿，展示本地持久化。
+9. 删除草稿，说明当前编辑区不会被清空。
+10. 手动删除 `metadata.title`，展示 Schema 校验失败。
+11. 恢复字段，展示 Schema 校验通过。
+12. 点击“导出 YAML”。
+13. 打开 `docs/script-yaml-schema.md` 说明 Schema 设计原因。
 
 ## 样例文件
 
@@ -130,6 +144,10 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 6. `feat: build novel to script interface`
 7. `feat: add ai provider selection`
 8. `docs: add demo and pr workflow`
+9. `feat: add model configuration panel`
+10. `fix: harden openai compatible provider contract`
+11. `fix: accept mislabeled provider json responses`
+12. `feat: add local project drafts`
 
 ## PR 规范
 

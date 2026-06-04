@@ -1,8 +1,15 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { parseNovelChapters } from "@/lib/chapters";
 import { SAMPLE_NOVEL, SAMPLE_TITLE } from "@/lib/demo-sample";
+import {
+  deleteLocalProjectDraft,
+  LOCAL_PROJECT_DRAFTS_STORAGE_KEY,
+  readLocalProjectDrafts,
+  type LocalProjectDraft,
+  upsertLocalProjectDraft
+} from "@/lib/local-drafts";
 import { validateScriptYaml, type ScriptValidationError } from "@/lib/script-schema";
 import type { ConversionReport } from "@/lib/mock-converter";
 
@@ -25,18 +32,78 @@ function formatValidationErrors(errors: ScriptValidationError[]): string {
   return errors.map((error) => `${error.path}: ${error.message}`).join("\n");
 }
 
+function createDraftId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `draft-${Date.now()}`;
+}
+
+const EMPTY_DRAFTS: LocalProjectDraft[] = [];
+const LOCAL_DRAFTS_CHANGED_EVENT = "novel-to-script-ai:local-drafts-changed";
+let cachedDraftsRaw: string | null | undefined;
+let cachedDrafts: LocalProjectDraft[] = EMPTY_DRAFTS;
+
+function getLocalDraftsSnapshot(): LocalProjectDraft[] {
+  if (typeof window === "undefined") {
+    return EMPTY_DRAFTS;
+  }
+
+  const raw = window.localStorage.getItem(LOCAL_PROJECT_DRAFTS_STORAGE_KEY);
+  if (raw === cachedDraftsRaw) {
+    return cachedDrafts;
+  }
+
+  cachedDraftsRaw = raw;
+  cachedDrafts = readLocalProjectDrafts(window.localStorage);
+  return cachedDrafts;
+}
+
+function getServerDraftsSnapshot(): LocalProjectDraft[] {
+  return EMPTY_DRAFTS;
+}
+
+function subscribeLocalDrafts(onStoreChange: () => void): () => void {
+  function handleLocalChange() {
+    onStoreChange();
+  }
+
+  function handleStorageChange(event: StorageEvent) {
+    if (event.key === LOCAL_PROJECT_DRAFTS_STORAGE_KEY || event.key === null) {
+      onStoreChange();
+    }
+  }
+
+  window.addEventListener(LOCAL_DRAFTS_CHANGED_EVENT, handleLocalChange);
+  window.addEventListener("storage", handleStorageChange);
+
+  return () => {
+    window.removeEventListener(LOCAL_DRAFTS_CHANGED_EVENT, handleLocalChange);
+    window.removeEventListener("storage", handleStorageChange);
+  };
+}
+
+function notifyLocalDraftsChanged() {
+  cachedDraftsRaw = undefined;
+  window.dispatchEvent(new Event(LOCAL_DRAFTS_CHANGED_EVENT));
+}
+
 export default function Home() {
   const [title, setTitle] = useState(SAMPLE_TITLE);
   const [novelText, setNovelText] = useState(SAMPLE_NOVEL);
   const [yamlText, setYamlText] = useState("");
   const [report, setReport] = useState<ConversionReport | null>(null);
   const [error, setError] = useState("");
+  const [draftMessage, setDraftMessage] = useState("");
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [provider, setProvider] = useState<ProviderName>("mock");
   const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
   const [model, setModel] = useState("gpt-4.1-mini");
   const [temperature, setTemperature] = useState(0.2);
   const [apiKey, setApiKey] = useState("");
   const [isPending, startTransition] = useTransition();
+  const drafts = useSyncExternalStore(subscribeLocalDrafts, getLocalDraftsSnapshot, getServerDraftsSnapshot);
 
   const chapters = useMemo(() => parseNovelChapters(novelText), [novelText]);
   const yamlValidation = useMemo(() => {
@@ -53,6 +120,45 @@ export default function Home() {
     setYamlText("");
     setReport(null);
     setError("");
+    setDraftMessage("已加载样例，当前不绑定任何草稿。");
+    setActiveDraftId(null);
+  }
+
+  function saveDraft() {
+    const id = activeDraftId ?? createDraftId();
+    const draft: LocalProjectDraft = {
+      version: 1,
+      id,
+      title: title.trim() || "未命名草稿",
+      novelText,
+      yamlText,
+      report,
+      updatedAt: new Date().toISOString()
+    };
+
+    upsertLocalProjectDraft(window.localStorage, draft);
+    notifyLocalDraftsChanged();
+    setActiveDraftId(id);
+    setDraftMessage(`已保存草稿：${draft.title}`);
+  }
+
+  function loadDraft(draft: LocalProjectDraft) {
+    setTitle(draft.title);
+    setNovelText(draft.novelText);
+    setYamlText(draft.yamlText);
+    setReport(draft.report);
+    setError("");
+    setDraftMessage(`已加载草稿：${draft.title}`);
+    setActiveDraftId(draft.id);
+  }
+
+  function deleteDraft(draftId: string) {
+    deleteLocalProjectDraft(window.localStorage, draftId);
+    notifyLocalDraftsChanged();
+    if (activeDraftId === draftId) {
+      setActiveDraftId(null);
+    }
+    setDraftMessage("已删除草稿。当前编辑区不会被清空。");
   }
 
   function convert() {
@@ -107,6 +213,7 @@ export default function Home() {
       : formatValidationErrors(yamlValidation.errors)
     : "转换后会在这里显示 YAML Schema 校验结果。";
   const activeProviderText = report?.provider ?? provider;
+  const activeDraft = drafts.find((draft) => draft.id === activeDraftId);
 
   return (
     <main className="app-shell">
@@ -268,6 +375,52 @@ export default function Home() {
             <pre>{validationText}</pre>
           </div>
         </div>
+      </section>
+
+      <section className="drafts-panel" aria-label="本地项目草稿">
+        <div className="drafts-head">
+          <div>
+            <p className="section-kicker">Local Drafts</p>
+            <h2>本地项目草稿</h2>
+            <p>
+              草稿只保存在当前浏览器 localStorage。保存小说、YAML 和转换报告，不保存 API Key 或模型配置。
+            </p>
+          </div>
+          <div className="draft-actions">
+            <button className="primary-button" type="button" onClick={saveDraft}>
+              {activeDraft ? "更新当前草稿" : "保存为新草稿"}
+            </button>
+            <span>{activeDraft ? `当前：${activeDraft.title}` : "当前未绑定草稿"}</span>
+          </div>
+        </div>
+
+        {draftMessage ? <p className="draft-message">{draftMessage}</p> : null}
+
+        {drafts.length > 0 ? (
+          <div className="draft-list">
+            {drafts.map((draft) => (
+              <article className={draft.id === activeDraftId ? "draft-card active" : "draft-card"} key={draft.id}>
+                <div>
+                  <h3>{draft.title}</h3>
+                  <p>
+                    {new Date(draft.updatedAt).toLocaleString("zh-CN")} · {draft.report?.sceneCount ?? 0} 场 ·{" "}
+                    {draft.yamlText.trim() ? "含 YAML" : "仅小说"}
+                  </p>
+                </div>
+                <div className="draft-card-actions">
+                  <button className="ghost-button" type="button" onClick={() => loadDraft(draft)}>
+                    加载
+                  </button>
+                  <button className="ghost-button danger-button" type="button" onClick={() => deleteDraft(draft.id)}>
+                    删除
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="empty-drafts">还没有草稿。先转换或编辑内容，再点击“保存为新草稿”。</p>
+        )}
       </section>
 
       <section className="metrics-panel" aria-label="转换总结">

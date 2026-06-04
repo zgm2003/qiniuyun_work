@@ -90,6 +90,7 @@ a {
 
 .hero-card,
 .panel,
+.drafts-panel,
 .metrics-panel {
   border: 1px solid rgba(232, 162, 61, 0.22);
   background: var(--panel);
@@ -375,6 +376,110 @@ a {
   line-height: 1.55;
 }
 
+.drafts-panel {
+  margin-top: 24px;
+  padding: 22px;
+}
+
+.drafts-head {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.drafts-head h2 {
+  margin: 4px 0 8px;
+  font-size: 28px;
+  letter-spacing: -0.04em;
+}
+
+.drafts-head p,
+.draft-actions span,
+.empty-drafts,
+.draft-message {
+  color: var(--muted);
+}
+
+.drafts-head p {
+  max-width: 720px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.draft-actions {
+  display: grid;
+  gap: 10px;
+  min-width: 210px;
+  text-align: right;
+}
+
+.draft-actions span {
+  font-size: 13px;
+}
+
+.draft-message,
+.empty-drafts {
+  border: 1px solid var(--line);
+  background: rgba(12, 10, 8, 0.44);
+  padding: 12px;
+}
+
+.draft-message {
+  margin: 16px 0 0;
+}
+
+.empty-drafts {
+  margin: 18px 0 0;
+}
+
+.draft-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.draft-card {
+  display: grid;
+  min-height: 136px;
+  gap: 16px;
+  align-content: space-between;
+  border: 1px solid rgba(245, 239, 227, 0.12);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 16px;
+}
+
+.draft-card.active {
+  border-color: rgba(232, 162, 61, 0.55);
+  background:
+    linear-gradient(135deg, rgba(232, 162, 61, 0.12), transparent),
+    rgba(255, 255, 255, 0.035);
+}
+
+.draft-card h3 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.035em;
+}
+
+.draft-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.draft-card-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.danger-button {
+  border-color: rgba(255, 118, 109, 0.5);
+  color: var(--danger);
+}
+
 .metrics-panel {
   display: grid;
   grid-template-columns: 260px 1fr;
@@ -417,7 +522,21 @@ a {
 
   .hero-panel,
   .workspace-grid,
+  .drafts-head,
   .metrics-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .drafts-head {
+    display: grid;
+  }
+
+  .draft-actions {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .draft-list {
     grid-template-columns: 1fr;
   }
 
