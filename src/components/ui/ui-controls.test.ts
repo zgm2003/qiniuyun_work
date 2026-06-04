@@ -47,6 +47,22 @@ describe("shared UI controls", () => {
     expect(markup).toContain("OpenAI Compatible");
   });
 
+
+  test("keeps an accessible select label when the visual label is hidden", () => {
+    const markup = renderToStaticMarkup(
+      createElement(UiSelect, {
+        label: "Model",
+        value: "gpt-4.1-mini",
+        options: [{ value: "gpt-4.1-mini", label: "gpt-4.1-mini" }],
+        onChange: () => undefined,
+        hideLabel: true
+      })
+    );
+
+    expect(markup).toContain('class="visually-hidden"');
+    expect(markup).toContain("Model");
+  });
+
   test("renders dialog content only when open", () => {
     const closed = renderToStaticMarkup(
       createElement(

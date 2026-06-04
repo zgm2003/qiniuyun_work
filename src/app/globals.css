@@ -568,6 +568,33 @@ a {
   padding: 0 11px;
 }
 
+.model-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.model-field-main {
+  min-width: 0;
+}
+
+.model-fetch-button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.model-list-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.model-list-message.error {
+  color: var(--danger);
+}
+
 .ui-select-field {
   display: grid;
   gap: 6px;

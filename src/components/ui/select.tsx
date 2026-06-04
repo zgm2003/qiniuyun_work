@@ -15,6 +15,7 @@ type UiSelectProps<TValue extends string = string> = {
   onChange: (value: TValue) => void;
   defaultOpen?: boolean;
   disabled?: boolean;
+  hideLabel?: boolean;
 };
 
 export function UiSelect<TValue extends string>({
@@ -23,7 +24,8 @@ export function UiSelect<TValue extends string>({
   options,
   onChange,
   defaultOpen = false,
-  disabled = false
+  disabled = false,
+  hideLabel = false
 }: UiSelectProps<TValue>) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const listboxId = useId();
@@ -42,7 +44,7 @@ export function UiSelect<TValue extends string>({
 
   return (
     <div className="ui-select-field">
-      <span className="ui-field-label">{label}</span>
+      <span className={hideLabel ? "visually-hidden" : "ui-field-label"}>{label}</span>
       <div className={isOpen ? "ui-select open" : "ui-select"}>
         <button
           aria-controls={listboxId}

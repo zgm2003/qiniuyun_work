@@ -15,6 +15,8 @@ import {
 import { buildScriptQualityChecklist, type ScriptQualityStatus } from "@/lib/script-quality";
 import { validateScriptYaml, type ScriptValidationError } from "@/lib/script-schema";
 import type { ConversionReport } from "@/lib/mock-converter";
+import { buildModelOptions } from "./model-options";
+import { fetchProviderModels } from "./model-list-client";
 import { DEFAULT_PRODUCT_PROVIDER } from "./provider-options";
 
 export type ProviderName = "mock" | "openai-compatible";
@@ -27,6 +29,8 @@ type ConvertSuccess = {
 type ConvertFailure = {
   error: string;
 };
+
+export type ModelListStatus = "idle" | "loading" | "ready" | "error";
 
 export type WorkspaceContextValue = {
   title: string;
@@ -50,6 +54,12 @@ export type WorkspaceContextValue = {
   setTemperature: (value: number) => void;
   apiKey: string;
   setApiKey: (value: string) => void;
+  modelIds: string[];
+  modelOptions: ReturnType<typeof buildModelOptions>;
+  modelListStatus: ModelListStatus;
+  modelListMessage: string;
+  canFetchModels: boolean;
+  isModelListPending: boolean;
   isPending: boolean;
   drafts: LocalProjectDraft[];
   chapters: ReturnType<typeof parseNovelChapters>;
@@ -66,6 +76,7 @@ export type WorkspaceContextValue = {
   saveDraft: () => void;
   loadDraft: (draft: LocalProjectDraft) => void;
   deleteDraft: (draftId: string) => void;
+  fetchModels: () => Promise<void>;
   convert: () => void;
   downloadYaml: () => void;
   formatQualityStatus: (status: ScriptQualityStatus) => string;
@@ -164,6 +175,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [model, setModel] = useState("gpt-4.1-mini");
   const [temperature, setTemperature] = useState(0.2);
   const [apiKey, setApiKey] = useState("");
+  const [modelIds, setModelIds] = useState<string[]>([]);
+  const [modelListStatus, setModelListStatus] = useState<ModelListStatus>("idle");
+  const [modelListMessage, setModelListMessage] = useState("填写 API Key 后可从供应商实时获取模型列表。");
+  const [isModelListPending, setIsModelListPending] = useState(false);
   const [isPending, startTransition] = useTransition();
   const drafts = useSyncExternalStore(subscribeLocalDrafts, getLocalDraftsSnapshot, getServerDraftsSnapshot);
 
@@ -185,6 +200,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setReport(null);
     setError("");
     setSourceMessage("已加载样例文本，当前不绑定任何草稿。");
+    setModelIds([]);
+    setModelListStatus("idle");
+    setModelListMessage("填写 API Key 后可从供应商实时获取模型列表。");
     setDraftMessage("已加载样例，当前不绑定任何草稿。");
     setActiveDraftId(null);
   }
@@ -207,6 +225,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setReport(null);
     setError("");
     setSourceMessage(`已导入 ${imported.fileName}，标题已设为“${imported.title}”。`);
+    setModelIds([]);
+    setModelListStatus("idle");
+    setModelListMessage("填写 API Key 后可从供应商实时获取模型列表。");
     setDraftMessage("已导入本地文本，当前不绑定任何草稿。");
     setActiveDraftId(null);
   }
@@ -246,6 +267,35 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setActiveDraftId(null);
     }
     setDraftMessage("已删除草稿。当前编辑区不会被清空。");
+  }
+
+  async function fetchModels() {
+    setError("");
+    setIsModelListPending(true);
+    setModelListStatus("loading");
+    setModelListMessage("正在从供应商获取模型列表...");
+
+    try {
+      const models = await fetchProviderModels({
+        provider,
+        baseUrl: baseUrl.trim(),
+        apiKey: apiKey.trim()
+      });
+
+      setModelIds(models);
+      if (models.length > 0 && !model.trim()) {
+        setModel(models[0]);
+      }
+      setModelListStatus("ready");
+      setModelListMessage(`已获取 ${models.length} 个模型。`);
+    } catch (modelsError) {
+      const message = modelsError instanceof Error ? modelsError.message : "获取模型列表失败";
+      setModelIds([]);
+      setModelListStatus("error");
+      setModelListMessage(message);
+    } finally {
+      setIsModelListPending(false);
+    }
   }
 
   function convert() {
@@ -294,6 +344,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
 
   const canConvert = title.trim().length > 0 && novelText.trim().length > 0 && chapterOutline.ready;
+  const canFetchModels = provider === "openai-compatible" && Boolean(apiKey.trim());
+  const modelOptions = useMemo(() => buildModelOptions(modelIds, model), [modelIds, model]);
   const validationText = yamlValidation
     ? yamlValidation.ok
       ? "Schema 校验通过，可以导出。"
@@ -327,6 +379,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setTemperature,
     apiKey,
     setApiKey,
+    modelIds,
+    modelOptions,
+    modelListStatus,
+    modelListMessage,
+    canFetchModels,
+    isModelListPending,
     isPending,
     drafts,
     chapters,
@@ -343,6 +401,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     saveDraft,
     loadDraft,
     deleteDraft,
+    fetchModels,
     convert,
     downloadYaml,
     formatQualityStatus
