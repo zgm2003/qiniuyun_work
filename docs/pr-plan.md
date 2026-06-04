@@ -50,6 +50,13 @@ npm run build
 | 6 | feat | AI provider settings | 将 AI 供应商、模型、健康检查从单次配置升级为可管理资源。 |
 | 7 | feat | prompt template management | 将硬编码提示词迁移为可配置模板，并保留 Schema 校验硬约束。 |
 
+## 产品化阶段已推进
+
+| 序号 | 类型 | 标题 | 作用 |
+| --- | --- | --- | --- |
+| P1 | docs | product architecture and style guideline | 明确产品化架构边界和后续 UI 改动规则。 |
+| P2 | style | workspace shell restyle | 将工作台调整为中性 SaaS / 管理台风格，不改业务行为。 |
+
 ## 当前最终演示链路
 
 ```text

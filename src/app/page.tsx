@@ -280,13 +280,33 @@ export default function Home() {
     : `还差 ${chapterOutline.missingChapterCount} 章`;
 
   return (
-    <main className="app-shell">
+    <>
+      <header className="top-nav">
+        <div className="top-nav-inner">
+          <a className="brand-mark" href="#workspace" aria-label="AI 小说转剧本工作台首页">
+            <span className="brand-icon">剧</span>
+            <span>
+              <strong>ScriptForge</strong>
+              <small>AI 小说转剧本</small>
+            </span>
+          </a>
+          <nav aria-label="产品导航">
+            <a href="#workspace">工作台</a>
+            <a href="#model-config">AI 设置</a>
+            <a href="#drafts">项目草稿</a>
+            <a href="#report">质量报告</a>
+          </nav>
+          <span className="nav-status">MVP · Productizing</span>
+        </div>
+      </header>
+
+      <main id="workspace" className="app-shell">
       <section className="hero-panel">
         <div>
           <p className="eyebrow">Novel · YAML · Script</p>
-          <h1>AI 小说转剧本工具</h1>
+          <h1>小说转剧本工作台</h1>
           <p className="lead">
-            输入 3 个章节以上小说文本，生成结构化 YAML 剧本初稿。缺字段不兜底，坏 YAML 不导出。
+            为作者准备的 AI 改编工作区：导入小说、识别章节、生成结构化 YAML 剧本，并用 Schema 与质量清单兜住交付质量。
           </p>
         </div>
         <div className="hero-card" aria-label="当前模型配置">
@@ -331,7 +351,7 @@ export default function Home() {
             placeholder="请输入作品标题"
           />
 
-          <div className="model-config-card" aria-label="模型配置">
+          <div id="model-config" className="model-config-card" aria-label="模型配置">
             <div className="model-config-head">
               <div>
                 <p className="section-kicker">Model Config</p>
@@ -509,7 +529,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="drafts-panel" aria-label="本地项目草稿">
+      <section id="drafts" className="drafts-panel" aria-label="本地项目草稿">
         <div className="drafts-head">
           <div>
             <p className="section-kicker">Local Drafts</p>
@@ -555,7 +575,7 @@ export default function Home() {
         )}
       </section>
 
-      <section className="metrics-panel" aria-label="转换总结">
+      <section id="report" className="metrics-panel" aria-label="转换总结">
         <div>
           <p className="section-kicker">Conversion Report</p>
           <h2>课后式总结</h2>
@@ -567,7 +587,8 @@ export default function Home() {
           <Metric label="台词" value={report?.dialogueLineCount ?? "—"} />
         </div>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 
