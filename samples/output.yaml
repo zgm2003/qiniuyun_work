@@ -1,0 +1,69 @@
+metadata:
+  title: 雨夜来信
+  source_chapters: 3
+  language: zh-CN
+  format_version: "1.0"
+characters:
+  - id: char_001
+    name: 林夏
+    role: protagonist
+    traits:
+      - 主动
+      - 执着
+  - id: char_002
+    name: 陈默
+    role: supporting
+    traits:
+      - 保守
+      - 知情
+scenes:
+  - id: scene_001
+    chapter: 1
+    heading: 雨夜来信
+    location: 旧书店
+    time: 雨夜
+    characters:
+      - char_001
+    action: 林夏在旧书店收到一封没有署名的信。
+    dialogue:
+      - character: char_001
+        line: 这件事不能再被当作普通意外了。
+        emotion: 疑惑
+    camera_notes: 近景捕捉主角看到线索时的停顿。
+  - id: scene_002
+    chapter: 2
+    heading: 地铁尽头
+    location: 末班地铁
+    time: 深夜
+    characters:
+      - char_001
+      - char_002
+    action: 林夏带着信来到末班地铁。
+    dialogue:
+      - character: char_001
+        line: 如果继续追查，我们就得面对真正的问题。
+        emotion: 警惕
+    camera_notes: 车厢灯光闪烁，制造压迫感。
+  - id: scene_003
+    chapter: 3
+    heading: 天台对峙
+    location: 城市天台
+    time: 黎明前
+    characters:
+      - char_001
+      - char_002
+    action: 林夏和陈默在天台对峙。
+    dialogue:
+      - character: char_001
+        line: 现在该把隐藏的真相说出来了。
+        emotion: 坚定
+    camera_notes: 镜头从两人推向远处城市天际线。
+summary:
+  logline: 雨夜来信讲述主角追查线索并面对真相的故事。
+  themes:
+    - 真相
+    - 选择
+    - 信任
+  adaptation_notes:
+    - 按章节建立场景，保留原小说的主要悬念推进。
+    - 减少解释性旁白，把关键信息转为动作和台词。
