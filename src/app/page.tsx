@@ -11,6 +11,7 @@ import {
   type LocalProjectDraft,
   upsertLocalProjectDraft
 } from "@/lib/local-drafts";
+import { buildScriptQualityChecklist, type ScriptQualityStatus } from "@/lib/script-quality";
 import { validateScriptYaml, type ScriptValidationError } from "@/lib/script-schema";
 import type { ConversionReport } from "@/lib/mock-converter";
 
@@ -31,6 +32,18 @@ function isConvertFailure(value: ConvertSuccess | ConvertFailure): value is Conv
 
 function formatValidationErrors(errors: ScriptValidationError[]): string {
   return errors.map((error) => `${error.path}: ${error.message}`).join("\n");
+}
+
+function formatQualityStatus(status: ScriptQualityStatus): string {
+  if (status === "pass") {
+    return "通过";
+  }
+
+  if (status === "fail") {
+    return "需修复";
+  }
+
+  return "等待生成";
 }
 
 function createDraftId(): string {
@@ -115,6 +128,7 @@ export default function Home() {
 
     return validateScriptYaml(yamlText);
   }, [yamlText]);
+  const scriptQuality = useMemo(() => buildScriptQualityChecklist(yamlValidation), [yamlValidation]);
 
   function loadSample() {
     setTitle(SAMPLE_TITLE);
@@ -408,6 +422,31 @@ export default function Home() {
           <div className={yamlValidation?.ok ? "validation ok" : yamlValidation ? "validation bad" : "validation"}>
             <strong>{yamlValidation?.ok ? "校验通过" : yamlValidation ? "校验失败" : "等待校验"}</strong>
             <pre>{validationText}</pre>
+          </div>
+
+          <div className={`quality-card ${scriptQuality.status}`} aria-label="剧本质量清单">
+            <div className="quality-head">
+              <div>
+                <p className="section-kicker">Quality Checklist</p>
+                <h3>剧本质量清单</h3>
+              </div>
+              <span className={`quality-score ${scriptQuality.status}`}>
+                {scriptQuality.passedCount}/{scriptQuality.items.length} 通过
+              </span>
+            </div>
+
+            <ul className="quality-list">
+              {scriptQuality.items.map((item) => (
+                <li className={`quality-item ${item.status}`} key={item.id}>
+                  <div className="quality-item-head">
+                    <strong>{item.label}</strong>
+                    <span>{formatQualityStatus(item.status)}</span>
+                  </div>
+                  <p>{item.description}</p>
+                  <small>{item.detail}</small>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
