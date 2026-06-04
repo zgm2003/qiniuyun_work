@@ -13,6 +13,15 @@ import {
 
 export type ProviderEnvironment = Record<string, string | undefined>;
 export type FetchImplementation = typeof fetch;
+export type ProviderName = "mock" | "openai-compatible";
+
+export type RequestModelConfig = {
+  provider: ProviderName;
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
+  temperature?: number;
+};
 
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_MODEL = "gpt-4.1-mini";
@@ -65,15 +74,17 @@ ${input.text}`;
 async function convertWithOpenAICompatible(
   input: NovelConversionInput,
   env: ProviderEnvironment,
-  fetchImpl: FetchImplementation
+  fetchImpl: FetchImplementation,
+  modelConfig?: RequestModelConfig
 ): Promise<NovelConversionResult> {
-  const apiKey = env.OPENAI_COMPATIBLE_API_KEY;
+  const apiKey = modelConfig?.apiKey || env.OPENAI_COMPATIBLE_API_KEY;
   if (!apiKey) {
     throw new Error("OPENAI_COMPATIBLE_API_KEY 未配置");
   }
 
-  const baseUrl = (env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
-  const model = env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_MODEL;
+  const baseUrl = (modelConfig?.baseUrl ?? env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
+  const model = modelConfig?.model ?? env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_MODEL;
+  const temperature = modelConfig?.temperature ?? 0.2;
   const response = await fetchImpl(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -82,7 +93,7 @@ async function convertWithOpenAICompatible(
     },
     body: JSON.stringify({
       model,
-      temperature: 0.2,
+      temperature,
       messages: [
         {
           role: "system",
@@ -123,16 +134,17 @@ async function convertWithOpenAICompatible(
 export async function convertNovelWithProvider(
   input: NovelConversionInput,
   env: ProviderEnvironment = process.env,
-  fetchImpl: FetchImplementation = fetch
+  fetchImpl: FetchImplementation = fetch,
+  modelConfig?: RequestModelConfig
 ): Promise<NovelConversionResult> {
-  const provider = env.AI_PROVIDER ?? "mock";
+  const provider = modelConfig?.provider ?? env.AI_PROVIDER ?? "mock";
 
   if (provider === "mock") {
     return convertNovelToScript(input);
   }
 
   if (provider === "openai-compatible") {
-    return convertWithOpenAICompatible(input, env, fetchImpl);
+    return convertWithOpenAICompatible(input, env, fetchImpl, modelConfig);
   }
 
   throw new Error(`不支持的 AI_PROVIDER：${provider}`);

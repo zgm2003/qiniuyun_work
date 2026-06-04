@@ -52,6 +52,67 @@ describe("convertNovelWithProvider", () => {
     });
   });
 
+  it("lets request model config override env provider settings for one conversion", async () => {
+    const aiYaml = convertNovelToScript({ title: "雨夜来信", text }).yaml;
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: aiYaml } }]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    const result = await convertNovelWithProvider(
+      { title: "雨夜来信", text },
+      {
+        AI_PROVIDER: "mock",
+        OPENAI_COMPATIBLE_API_KEY: "env-key",
+        OPENAI_COMPATIBLE_BASE_URL: "https://env.example.test/v1",
+        OPENAI_COMPATIBLE_MODEL: "env-model"
+      },
+      fetchImpl,
+      {
+        provider: "openai-compatible",
+        apiKey: "request-key",
+        baseUrl: "https://request.example.test/v1",
+        model: "request-model",
+        temperature: 0.7
+      }
+    );
+
+    const requestInit = fetchImpl.mock.calls[0][1];
+    const requestBody = JSON.parse(String(requestInit?.body)) as {
+      model: string;
+      temperature: number;
+    };
+
+    expect(result.report.provider).toBe("openai-compatible");
+    expect(fetchImpl.mock.calls[0][0]).toBe("https://request.example.test/v1/chat/completions");
+    expect(requestInit?.headers).toMatchObject({
+      authorization: "Bearer request-key"
+    });
+    expect(requestBody.model).toBe("request-model");
+    expect(requestBody.temperature).toBe(0.7);
+  });
+
+  it("does not call fetch when request model config selects mock", async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+
+    const result = await convertNovelWithProvider(
+      { title: "雨夜来信", text },
+      {
+        AI_PROVIDER: "openai-compatible",
+        OPENAI_COMPATIBLE_API_KEY: "env-key"
+      },
+      fetchImpl,
+      { provider: "mock" }
+    );
+
+    expect(result.report.provider).toBe("mock");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("fails loudly when OpenAI-compatible provider is missing an API key", async () => {
     await expect(
       convertNovelWithProvider(

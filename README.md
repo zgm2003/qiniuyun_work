@@ -12,6 +12,7 @@
 - 输入校验：少于 3 个章节直接报错，不生成假结果。
 - 剧本生成：默认使用确定性 mock provider，可无 API Key 完整演示。
 - 真实 AI 接口：配置 `AI_PROVIDER=openai-compatible` 后调用 OpenAI 兼容 Chat Completions API。
+- 模型配置面板：页面可为单次转换选择 provider、base URL、model、temperature 和一次性 API Key。
 - YAML Schema：使用 Zod 定义运行时 Schema，并提供设计说明文档。
 - YAML 编辑与校验：页面内编辑 YAML，实时显示 Schema 校验结果。
 - 导出：只有 YAML 校验通过时才允许导出。
@@ -26,6 +27,7 @@
 - YAML 运行时校验和错误路径展示。
 - mock 剧本转换器。
 - OpenAI-compatible provider 编排。
+- 请求级模型配置，不破坏默认 mock 演示流程。
 - 转换 API。
 - 前端输入、转换、编辑、校验、导出闭环。
 - 示例小说、示例输出和录屏流程。
@@ -95,18 +97,21 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 
 真实 AI 返回内容仍然必须通过本项目 YAML Schema 校验。校验失败会报错，不会静默兜底。
 
+页面上的“模型配置”面板可以覆盖 `.env` 中的 provider/base URL/model/temperature。API Key 只随本次 `/api/convert` 请求发送，不写入仓库，也不进入 localStorage 草稿。
+
 ## 录屏演示步骤
 
 1. 启动项目：`npm run dev`。
 2. 打开首页。
 3. 点击“加载样例”。
 4. 确认页面显示已识别 3 章。
-5. 点击“转换为 YAML 剧本”。
-6. 展示生成的 YAML、角色、场景、台词统计。
-7. 手动删除 `metadata.title`，展示 Schema 校验失败。
-8. 恢复字段，展示 Schema 校验通过。
-9. 点击“导出 YAML”。
-10. 打开 `docs/script-yaml-schema.md` 说明 Schema 设计原因。
+5. 展示“模型配置”面板：默认 `mock`，也可切到 `openai-compatible` 输入一次性 API Key。
+6. 点击“转换为 YAML 剧本”。
+7. 展示生成的 YAML、角色、场景、台词统计。
+8. 手动删除 `metadata.title`，展示 Schema 校验失败。
+9. 恢复字段，展示 Schema 校验通过。
+10. 点击“导出 YAML”。
+11. 打开 `docs/script-yaml-schema.md` 说明 Schema 设计原因。
 
 ## 样例文件
 

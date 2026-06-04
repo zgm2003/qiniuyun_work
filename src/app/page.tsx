@@ -6,6 +6,8 @@ import { SAMPLE_NOVEL, SAMPLE_TITLE } from "@/lib/demo-sample";
 import { validateScriptYaml, type ScriptValidationError } from "@/lib/script-schema";
 import type { ConversionReport } from "@/lib/mock-converter";
 
+type ProviderName = "mock" | "openai-compatible";
+
 type ConvertSuccess = {
   yaml: string;
   report: ConversionReport;
@@ -29,6 +31,11 @@ export default function Home() {
   const [yamlText, setYamlText] = useState("");
   const [report, setReport] = useState<ConversionReport | null>(null);
   const [error, setError] = useState("");
+  const [provider, setProvider] = useState<ProviderName>("mock");
+  const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
+  const [model, setModel] = useState("gpt-4.1-mini");
+  const [temperature, setTemperature] = useState(0.2);
+  const [apiKey, setApiKey] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const chapters = useMemo(() => parseNovelChapters(novelText), [novelText]);
@@ -51,10 +58,20 @@ export default function Home() {
   function convert() {
     setError("");
     startTransition(async () => {
+      const modelConfig =
+        provider === "mock"
+          ? { provider }
+          : {
+              provider,
+              baseUrl: baseUrl.trim() || undefined,
+              model: model.trim() || undefined,
+              temperature,
+              apiKey: apiKey.trim() || undefined
+            };
       const response = await fetch("/api/convert", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ title, text: novelText })
+        body: JSON.stringify({ title, text: novelText, modelConfig })
       });
       const body = (await response.json()) as ConvertSuccess | ConvertFailure;
 
@@ -89,6 +106,7 @@ export default function Home() {
       ? "Schema 校验通过，可以导出。"
       : formatValidationErrors(yamlValidation.errors)
     : "转换后会在这里显示 YAML Schema 校验结果。";
+  const activeProviderText = report?.provider ?? provider;
 
   return (
     <main className="app-shell">
@@ -100,10 +118,10 @@ export default function Home() {
             输入 3 个章节以上小说文本，生成结构化 YAML 剧本初稿。缺字段不兜底，坏 YAML 不导出。
           </p>
         </div>
-        <div className="hero-card" aria-label="当前演示模式">
+        <div className="hero-card" aria-label="当前模型配置">
           <span>Provider</span>
-          <strong>mock</strong>
-          <small>无 API Key 也能稳定录屏</small>
+          <strong>{activeProviderText}</strong>
+          <small>{provider === "mock" ? "无 API Key 也能稳定录屏" : model}</small>
         </div>
       </section>
 
@@ -129,6 +147,80 @@ export default function Home() {
             onChange={(event) => setTitle(event.target.value)}
             placeholder="请输入作品标题"
           />
+
+          <div className="model-config-card" aria-label="模型配置">
+            <div className="model-config-head">
+              <div>
+                <p className="section-kicker">Model Config</p>
+                <h3>模型配置</h3>
+              </div>
+              <span className={provider === "mock" ? "provider-pill mock" : "provider-pill live"}>
+                {provider === "mock" ? "稳定演示" : "真实模型"}
+              </span>
+            </div>
+
+            <div className="model-grid">
+              <label>
+                <span>Provider</span>
+                <select
+                  className="provider-select"
+                  value={provider}
+                  onChange={(event) => setProvider(event.target.value as ProviderName)}
+                >
+                  <option value="mock">mock</option>
+                  <option value="openai-compatible">openai-compatible</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Temperature</span>
+                <input
+                  className="compact-input"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={temperature}
+                  onChange={(event) => setTemperature(Number(event.target.value))}
+                />
+              </label>
+            </div>
+
+            {provider === "openai-compatible" ? (
+              <div className="model-live-fields">
+                <label>
+                  <span>Base URL</span>
+                  <input
+                    className="compact-input"
+                    value={baseUrl}
+                    onChange={(event) => setBaseUrl(event.target.value)}
+                    placeholder="https://api.openai.com/v1"
+                  />
+                </label>
+                <label>
+                  <span>Model</span>
+                  <input
+                    className="compact-input"
+                    value={model}
+                    onChange={(event) => setModel(event.target.value)}
+                    placeholder="gpt-4.1-mini"
+                  />
+                </label>
+                <label>
+                  <span>API Key（仅本次请求）</span>
+                  <input
+                    className="compact-input sensitive-input"
+                    type="password"
+                    value={apiKey}
+                    onChange={(event) => setApiKey(event.target.value)}
+                    placeholder="不会保存到本地草稿或仓库"
+                  />
+                </label>
+              </div>
+            ) : (
+              <p className="config-hint">mock provider 会忽略真实模型参数，用于无密钥稳定录屏。</p>
+            )}
+          </div>
 
           <label className="field-label" htmlFor="novel">
             小说正文
