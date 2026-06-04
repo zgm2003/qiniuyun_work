@@ -55,7 +55,7 @@ npm run build
 | 序号 | 类型 | 标题 | 作用 |
 | --- | --- | --- | --- |
 | P1 | docs | product architecture and style guideline | 明确产品化架构边界和后续 UI 改动规则。 |
-| P2 | style | workspace shell restyle | 将工作台调整为中性 SaaS / 管理台风格，不改业务行为。 |
+| P2 | refactor/style | routed workspace shell | 将拥挤单页拆成 `/workspace`、`/script`、`/drafts`、`/report`，并调整为中性 SaaS / 管理台风格。 |
 
 ## 当前最终演示链路
 

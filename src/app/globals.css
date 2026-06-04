@@ -141,6 +141,11 @@ a {
   color: var(--foreground);
 }
 
+.top-nav nav a.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
 .nav-status {
   display: inline-flex;
   min-width: 166px;
@@ -157,6 +162,137 @@ a {
   width: min(1480px, calc(100vw - 48px));
   margin: 0 auto;
   padding: 32px 0 56px;
+}
+
+.entry-shell {
+  width: min(1180px, calc(100vw - 48px));
+  margin: 0 auto;
+  padding: 56px 0;
+}
+
+.entry-card {
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(23, 23, 23, 0.06), transparent 48%),
+    rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 80px var(--shadow);
+  padding: clamp(28px, 5vw, 56px);
+}
+
+.entry-card h1,
+.workbench-page-head h1 {
+  max-width: 860px;
+  margin: 10px 0 14px;
+  font-size: clamp(42px, 6vw, 76px);
+  line-height: 0.95;
+  letter-spacing: -0.075em;
+}
+
+.entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.entry-actions .primary-button,
+.entry-actions .ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.route-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.route-card {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 16px 48px var(--shadow);
+  padding: 18px;
+  transition: transform 140ms ease, border-color 140ms ease;
+}
+
+.route-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.route-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.route-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 22px;
+  letter-spacing: -0.045em;
+}
+
+.route-card p {
+  margin: 12px 0 0;
+  color: var(--muted-strong);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.workbench-page {
+  display: grid;
+  gap: 24px;
+}
+
+.workbench-page-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.workbench-page-head.compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.script-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 24px;
+  align-items: start;
+}
+
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.workspace-grid.single-output {
+  grid-template-columns: minmax(0, 1fr) 420px;
+}
+
+.route-side-panel {
+  position: sticky;
+  top: 88px;
+}
+
+.stacked-actions {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.drafts-panel.embedded,
+.metrics-panel.embedded {
+  margin-top: 0;
 }
 
 .hero-panel {
@@ -828,13 +964,24 @@ a {
     width: min(100vw - 32px, 860px);
   }
 
+  .entry-shell {
+    width: min(100vw - 32px, 860px);
+  }
+
   .hero-panel,
   .workspace-grid,
+  .workspace-grid.single-output,
+  .workbench-page-head,
+  .workbench-page-head.compact,
+  .script-grid,
+  .report-grid,
+  .route-grid,
   .metrics-panel {
     grid-template-columns: 1fr;
   }
 
-  .output-panel {
+  .output-panel,
+  .route-side-panel {
     position: static;
   }
 }
@@ -868,7 +1015,17 @@ a {
     padding-top: 24px;
   }
 
+  .entry-shell {
+    width: min(100vw - 28px, 760px);
+    padding: 28px 0;
+  }
+
   .hero-panel h1 {
+    font-size: clamp(38px, 13vw, 56px);
+  }
+
+  .entry-card h1,
+  .workbench-page-head h1 {
     font-size: clamp(38px, 13vw, 56px);
   }
 
