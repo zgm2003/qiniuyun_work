@@ -13,7 +13,7 @@ npm run dev
 
 1. 展示首页标题和 Provider 卡片，说明默认使用 `mock`，无 API Key 也能稳定演示。
 2. 点击“加载样例”。
-3. 指出页面识别出 3 个章节，满足题目要求。
+3. 指出“章节大纲预览”识别出 3 个章节，显示每章标题、字数和正文预览。
 4. 展示“模型配置”面板：默认 provider 是 `mock`。
 5. 切到 `openai-compatible`，说明可以填写 base URL、model、temperature 和一次性 API Key；再切回 `mock` 保持录屏稳定。
 6. 点击“转换为 YAML 剧本”。
@@ -32,6 +32,7 @@ npm run dev
 ## 讲解重点
 
 - 不是简单文本生成，而是输出可编辑、可校验的结构化剧本。
+- 章节大纲预览先暴露解析结果，避免用户不知道系统到底读懂了哪些章节。
 - 少于 3 个章节会直接拒绝，不生成假结果。
 - 缺字段不使用空字符串兜底，避免掩盖 AI 输出错误。
 - mock provider 保证现场稳定，OpenAI-compatible provider 保留真实 AI 能力。
