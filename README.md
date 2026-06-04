@@ -12,9 +12,9 @@
 - 章节大纲预览：转换前展示识别到的章节标题、字数和正文预览。
 - 本地文本导入：支持浏览器本地导入 `.txt` / `.md` 小说文本，不上传服务器。
 - 输入校验：少于 3 个章节直接报错，不生成假结果。
-- 剧本生成：默认使用确定性 mock provider，可无 API Key 完整演示。
-- 真实 AI 接口：配置 `AI_PROVIDER=openai-compatible` 后调用 OpenAI 兼容 Chat Completions API。
-- 模型配置面板：页面可为单次转换选择 provider、base URL、model、temperature 和一次性 API Key。
+- 剧本生成：产品界面默认使用 OpenAI-compatible 真实 AI provider。
+- 真实 AI 接口：调用 OpenAI 兼容 Chat Completions API。
+- 模型配置面板：页面可为单次转换配置 base URL、model、temperature 和一次性 API Key。
 - 本地项目草稿：可在浏览器 localStorage 保存、加载、删除当前小说/YAML/转换报告。
 - YAML Schema：使用 Zod 定义运行时 Schema，并提供设计说明文档。
 - YAML 编辑与校验：页面内编辑 YAML，实时显示 Schema 校验结果。
@@ -31,7 +31,7 @@
 ↓
 章节识别与大纲预览
 ↓
-选择 mock / OpenAI-compatible 模型
+配置 OpenAI-compatible 模型
 ↓
 生成结构化 YAML 剧本
 ↓
@@ -54,9 +54,9 @@ Schema 校验 + 剧本质量清单
 - 剧本 YAML Schema 设计。
 - YAML 运行时校验和错误路径展示。
 - 剧本结构质量清单，不做 AI 主观剧情评分。
-- mock 剧本转换器。
+- 确定性剧本转换器，仅用于测试、CI 和样例输出。
 - OpenAI-compatible provider 编排。
-- 请求级模型配置，不破坏默认 mock 演示流程。
+- 请求级模型配置，产品 UI 不暴露测试用 provider。
 - 浏览器本地草稿管理，不保存 API Key 和模型配置。
 - 转换 API。
 - 前端输入、转换、编辑、校验、导出闭环。
@@ -112,13 +112,7 @@ npm run build
 
 ## AI Provider 配置
 
-默认使用 mock provider，适合录屏和无网络演示：
-
-```env
-AI_PROVIDER=mock
-```
-
-如果要调用 OpenAI 兼容接口：
+产品默认调用 OpenAI 兼容接口：
 
 ```env
 AI_PROVIDER=openai-compatible
@@ -156,7 +150,7 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 2. 打开首页。
 3. 点击“导入文本”，选择 `samples/novel-3chapters.txt`；也可点击“加载样例”快速恢复。
 4. 确认标题由文件名生成，且“章节大纲预览”显示 3 章、每章标题、字数和正文预览。
-5. 展示“模型配置”面板：默认 `mock`，也可切到 `openai-compatible` 输入一次性 API Key。
+5. 展示“模型配置”面板：填写 OpenAI-compatible base URL、model、temperature 和一次性 API Key。
 6. 点击“转换为 YAML 剧本”。
 7. 展示生成的 YAML、Schema 校验和“剧本质量清单”全部通过。
 8. 展示角色、场景、台词统计。
@@ -170,7 +164,7 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 ## 样例文件
 
 - `samples/novel-3chapters.txt`：3 章小说输入样例。
-- `samples/output.yaml`：mock provider 生成的 YAML 剧本样例。
+- `samples/output.yaml`：确定性转换器生成的 YAML 剧本样例，用于离线核对 Schema 结构。
 
 ## 持续交付记录
 

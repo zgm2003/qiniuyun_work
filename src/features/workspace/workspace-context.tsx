@@ -15,6 +15,7 @@ import {
 import { buildScriptQualityChecklist, type ScriptQualityStatus } from "@/lib/script-quality";
 import { validateScriptYaml, type ScriptValidationError } from "@/lib/script-schema";
 import type { ConversionReport } from "@/lib/mock-converter";
+import { DEFAULT_PRODUCT_PROVIDER } from "./provider-options";
 
 export type ProviderName = "mock" | "openai-compatible";
 
@@ -158,7 +159,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [sourceMessage, setSourceMessage] = useState("");
   const [draftMessage, setDraftMessage] = useState("");
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
-  const [provider, setProvider] = useState<ProviderName>("mock");
+  const [provider, setProvider] = useState<ProviderName>(DEFAULT_PRODUCT_PROVIDER);
   const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
   const [model, setModel] = useState("gpt-4.1-mini");
   const [temperature, setTemperature] = useState(0.2);
@@ -298,7 +299,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       ? "Schema 校验通过，可以导出。"
       : formatValidationErrors(yamlValidation.errors)
     : "转换后会在这里显示 YAML Schema 校验结果。";
-  const activeProviderText = report?.provider ?? provider;
+  const activeProviderText = provider;
   const activeDraft = drafts.find((draft) => draft.id === activeDraftId);
   const outlineStatusText = chapterOutline.ready
     ? `已达到最低 ${chapterOutline.minimumChapters} 章要求`

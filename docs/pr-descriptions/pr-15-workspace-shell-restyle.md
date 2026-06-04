@@ -16,6 +16,7 @@
   - `/report`：转换总结和质量报告。
 - 新增 `WorkspaceProvider`，在 workbench route group 内共享当前项目状态，避免路由切换丢失输入、YAML 和草稿状态。
 - 新增 `WorkbenchShell`，统一顶部导航和工作台布局。
+- 产品 UI 的 provider 选项只暴露 OpenAI-compatible，不展示测试用 provider。
 - 在 `src/app/globals.css` 中按 `docs/style-guideline.md` 替换视觉 token：
   - 浅色优先。
   - 中性色。
@@ -40,7 +41,8 @@ npm run build
 ## 兼容性
 
 - 不改变 `/api/convert` 请求结构。
-- 不改变 mock / OpenAI-compatible provider 行为。
+- 不改变底层 OpenAI-compatible provider 行为。
+- 测试用确定性转换器仍保留给测试、CI 和样例输出，但不出现在产品 UI。
 - 不改变 localStorage 草稿结构。
 - 不改变 YAML Schema 或质量清单判断。
 - 不保存 API Key 到本地草稿。

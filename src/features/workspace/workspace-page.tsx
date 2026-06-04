@@ -3,6 +3,7 @@
 import { type ChangeEvent, useRef } from "react";
 import type { ProviderName } from "./workspace-context";
 import { useWorkspace } from "./workspace-context";
+import { PRODUCT_PROVIDER_OPTIONS } from "./provider-options";
 
 export function WorkspacePage() {
   const workspace = useWorkspace();
@@ -38,7 +39,7 @@ export function WorkspacePage() {
         <div className="hero-card" aria-label="当前模型配置">
           <span>Provider</span>
           <strong>{workspace.activeProviderText}</strong>
-          <small>{workspace.provider === "mock" ? "无 API Key 也能稳定录屏" : workspace.model}</small>
+          <small>{workspace.model}</small>
         </div>
       </div>
 
@@ -83,8 +84,8 @@ export function WorkspacePage() {
                 <p className="section-kicker">Model Config</p>
                 <h3>模型配置</h3>
               </div>
-              <span className={workspace.provider === "mock" ? "provider-pill mock" : "provider-pill live"}>
-                {workspace.provider === "mock" ? "稳定演示" : "真实模型"}
+              <span className="provider-pill live">
+                真实模型
               </span>
             </div>
 
@@ -96,8 +97,11 @@ export function WorkspacePage() {
                   value={workspace.provider}
                   onChange={(event) => workspace.setProvider(event.target.value as ProviderName)}
                 >
-                  <option value="mock">mock</option>
-                  <option value="openai-compatible">openai-compatible</option>
+                  {PRODUCT_PROVIDER_OPTIONS.map((option) => (
+                    <option value={option.value} key={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -115,40 +119,36 @@ export function WorkspacePage() {
               </label>
             </div>
 
-            {workspace.provider === "openai-compatible" ? (
-              <div className="model-live-fields">
-                <label>
-                  <span>Base URL</span>
-                  <input
-                    className="compact-input"
-                    value={workspace.baseUrl}
-                    onChange={(event) => workspace.setBaseUrl(event.target.value)}
-                    placeholder="https://api.openai.com/v1"
-                  />
-                </label>
-                <label>
-                  <span>Model</span>
-                  <input
-                    className="compact-input"
-                    value={workspace.model}
-                    onChange={(event) => workspace.setModel(event.target.value)}
-                    placeholder="gpt-4.1-mini"
-                  />
-                </label>
-                <label>
-                  <span>API Key（仅本次请求）</span>
-                  <input
-                    className="compact-input sensitive-input"
-                    type="password"
-                    value={workspace.apiKey}
-                    onChange={(event) => workspace.setApiKey(event.target.value)}
-                    placeholder="不会保存到本地草稿或仓库"
-                  />
-                </label>
-              </div>
-            ) : (
-              <p className="config-hint">mock provider 会忽略真实模型参数，用于无密钥稳定录屏。</p>
-            )}
+            <div className="model-live-fields">
+              <label>
+                <span>Base URL</span>
+                <input
+                  className="compact-input"
+                  value={workspace.baseUrl}
+                  onChange={(event) => workspace.setBaseUrl(event.target.value)}
+                  placeholder="https://api.openai.com/v1"
+                />
+              </label>
+              <label>
+                <span>Model</span>
+                <input
+                  className="compact-input"
+                  value={workspace.model}
+                  onChange={(event) => workspace.setModel(event.target.value)}
+                  placeholder="gpt-4.1-mini"
+                />
+              </label>
+              <label>
+                <span>API Key（仅本次请求）</span>
+                <input
+                  className="compact-input sensitive-input"
+                  type="password"
+                  value={workspace.apiKey}
+                  onChange={(event) => workspace.setApiKey(event.target.value)}
+                  placeholder="不会保存到本地草稿或仓库"
+                />
+              </label>
+            </div>
           </div>
 
           <label className="field-label" htmlFor="novel">

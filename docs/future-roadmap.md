@@ -13,7 +13,7 @@
 - [x] `.txt` / `.md` 本地文本导入。
 - [x] 3 章以上小说输入校验。
 - [x] 章节切分和章节大纲预览。
-- [x] mock provider，保证无 API Key 可演示。
+- [x] 确定性转换器，用于测试、CI 和样例输出。
 - [x] OpenAI-compatible provider 接口。
 - [x] 页面模型配置面板。
 - [x] YAML 剧本 Schema。

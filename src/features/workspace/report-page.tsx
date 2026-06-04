@@ -32,7 +32,7 @@ export function ReportPage() {
         <article className="route-card">
           <p className="section-kicker">Provider</p>
           <h2>{workspace.activeProviderText}</h2>
-          <p>{workspace.provider === "mock" ? "当前是稳定演示模型。" : `当前模型：${workspace.model}`}</p>
+          <p>当前模型：{workspace.model}</p>
         </article>
         <article className="route-card">
           <p className="section-kicker">Schema</p>

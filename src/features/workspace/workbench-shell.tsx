@@ -9,7 +9,7 @@ import { useWorkspace } from "./workspace-context";
 export function WorkbenchShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const activeRoute = getActiveWorkbenchRoute(pathname);
-  const { activeProviderText, model, provider } = useWorkspace();
+  const { model } = useWorkspace();
 
   return (
     <>
@@ -29,7 +29,7 @@ export function WorkbenchShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          <span className="nav-status">{provider === "mock" ? activeProviderText : model}</span>
+          <span className="nav-status">{model}</span>
         </div>
       </header>
 
