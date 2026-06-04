@@ -36,6 +36,20 @@ npm run lint
 npm run build
 ```
 
+## 产品化阶段 PR 拆分
+
+比赛 MVP 收尾后，后续大改继续按小 PR 推进，不能把 UI、数据库、登录、管理端和 Prompt 系统一次性塞进一个 PR。
+
+| 顺序 | 类型 | 标题 | 作用 |
+| --- | --- | --- | --- |
+| 1 | docs | product architecture and style guideline | 明确产品化架构、样式规则和后续 AI 改动边界。 |
+| 2 | style | restyle workspace shell | 参考中性 SaaS / 管理台风格重做工作台外观，不改业务行为。 |
+| 3 | feat | database foundation | 接入 MySQL / Redis，增加健康检查和初始化脚本。 |
+| 4 | feat | auth foundation | 加入登录、密码哈希、JWT/session 和当前用户接口。 |
+| 5 | feat | RBAC and admin shell | 加入 admin/member 权限边界和管理端骨架。 |
+| 6 | feat | AI provider settings | 将 AI 供应商、模型、健康检查从单次配置升级为可管理资源。 |
+| 7 | feat | prompt template management | 将硬编码提示词迁移为可配置模板，并保留 Schema 校验硬约束。 |
+
 ## 当前最终演示链路
 
 ```text
