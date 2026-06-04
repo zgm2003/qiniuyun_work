@@ -14,14 +14,16 @@ npm run dev
 1. 展示首页标题和 Provider 卡片，说明默认使用 `mock`，无 API Key 也能稳定演示。
 2. 点击“加载样例”。
 3. 指出页面识别出 3 个章节，满足题目要求。
-4. 点击“转换为 YAML 剧本”。
-5. 展示右侧 YAML：包含 `metadata`、`characters`、`scenes`、`summary`。
-6. 展示底部转换总结：章节、角色、场景、台词数量。
-7. 删除 YAML 中的 `metadata.title`。
-8. 指出 Schema 校验失败，错误定位到 `metadata.title`。
-9. 恢复 `metadata.title`。
-10. 指出 Schema 校验通过，点击“导出 YAML”。
-11. 打开 `docs/script-yaml-schema.md`，说明为什么这样设计 YAML Schema。
+4. 展示“模型配置”面板：默认 provider 是 `mock`。
+5. 切到 `openai-compatible`，说明可以填写 base URL、model、temperature 和一次性 API Key；再切回 `mock` 保持录屏稳定。
+6. 点击“转换为 YAML 剧本”。
+7. 展示右侧 YAML：包含 `metadata`、`characters`、`scenes`、`summary`。
+8. 展示底部转换总结：章节、角色、场景、台词数量。
+9. 删除 YAML 中的 `metadata.title`。
+10. 指出 Schema 校验失败，错误定位到 `metadata.title`。
+11. 恢复 `metadata.title`。
+12. 指出 Schema 校验通过，点击“导出 YAML”。
+13. 打开 `docs/script-yaml-schema.md`，说明为什么这样设计 YAML Schema。
 
 ## 讲解重点
 
@@ -29,6 +31,7 @@ npm run dev
 - 少于 3 个章节会直接拒绝，不生成假结果。
 - 缺字段不使用空字符串兜底，避免掩盖 AI 输出错误。
 - mock provider 保证现场稳定，OpenAI-compatible provider 保留真实 AI 能力。
+- 模型配置是单次请求配置，API Key 不保存到仓库，也不写入 localStorage。
 
 ## 失败演示
 

@@ -30,7 +30,8 @@ body {
 
 button,
 textarea,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -162,7 +163,9 @@ a {
 
 .title-input,
 .novel-input,
-.yaml-editor {
+.yaml-editor,
+.provider-select,
+.compact-input {
   width: 100%;
   border: 1px solid var(--line);
   outline: none;
@@ -173,7 +176,9 @@ a {
 
 .title-input:focus,
 .novel-input:focus,
-.yaml-editor:focus {
+.yaml-editor:focus,
+.provider-select:focus,
+.compact-input:focus {
   border-color: var(--accent);
 }
 
@@ -181,6 +186,93 @@ a {
   height: 46px;
   padding: 0 14px;
   font-size: 18px;
+}
+
+.model-config-card {
+  margin-top: 18px;
+  border: 1px solid rgba(232, 162, 61, 0.18);
+  background:
+    linear-gradient(135deg, rgba(232, 162, 61, 0.08), transparent),
+    rgba(12, 10, 8, 0.42);
+  padding: 16px;
+}
+
+.model-config-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.model-config-head h3 {
+  margin: 4px 0 0;
+  font-size: 21px;
+  letter-spacing: -0.035em;
+}
+
+.provider-pill {
+  border: 1px solid var(--line);
+  padding: 6px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.provider-pill.mock {
+  border-color: rgba(143, 230, 160, 0.45);
+  color: var(--ok);
+}
+
+.provider-pill.live {
+  border-color: rgba(232, 162, 61, 0.5);
+  color: var(--accent-strong);
+}
+
+.model-grid,
+.model-live-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.model-grid {
+  grid-template-columns: minmax(0, 1fr) 150px;
+}
+
+.model-live-fields {
+  margin-top: 12px;
+}
+
+.model-grid label,
+.model-live-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.provider-select,
+.compact-input {
+  height: 40px;
+  padding: 0 11px;
+  color: var(--ink);
+}
+
+.provider-select {
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--accent-strong) 50%) right 14px center / 7px 7px no-repeat,
+    rgba(12, 10, 8, 0.72);
+}
+
+.sensitive-input {
+  font-family: "Cascadia Mono", Consolas, monospace;
+}
+
+.config-hint {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .novel-input,
