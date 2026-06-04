@@ -194,6 +194,31 @@ describe("convertNovelWithProvider", () => {
     ).rejects.toThrow("AI 服务返回了 HTML 页面，不是 JSON");
   });
 
+  it("accepts OpenAI-compatible JSON payloads mislabeled as text/event-stream", async () => {
+    const aiYaml = convertNovelToScript({ title: "雨夜来信", text }).yaml;
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: aiYaml } }]
+        }),
+        { status: 200, headers: { "content-type": "text/event-stream" } }
+      )
+    );
+
+    const result = await convertNovelWithProvider(
+      { title: "雨夜来信", text },
+      {
+        AI_PROVIDER: "openai-compatible",
+        OPENAI_COMPATIBLE_API_KEY: "test-key",
+        OPENAI_COMPATIBLE_BASE_URL: "https://llm.example.test/v1"
+      },
+      fetchImpl
+    );
+
+    expect(result.report.provider).toBe("openai-compatible");
+    expect(result.report.validationPassed).toBe(true);
+  });
+
   it("fails loudly when OpenAI-compatible provider is missing an API key", async () => {
     await expect(
       convertNovelWithProvider(

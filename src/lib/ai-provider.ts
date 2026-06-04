@@ -137,12 +137,8 @@ async function readOpenAICompatiblePayload(response: Response): Promise<{
   const bodyText = await response.text();
   const preview = bodyText.trim().replace(/\s+/g, " ").slice(0, 160);
 
-  if (!contentType.toLowerCase().includes("application/json")) {
-    if (contentType.toLowerCase().includes("text/html") || bodyText.trimStart().startsWith("<")) {
-      throw new Error(`AI 服务返回了 HTML 页面，不是 JSON。请检查 Base URL 是否应以 /v1 结尾。响应预览：${preview}`);
-    }
-
-    throw new Error(`AI 服务返回的 Content-Type 不是 JSON：${contentType || "unknown"}。响应预览：${preview}`);
+  if (contentType.toLowerCase().includes("text/html") || bodyText.trimStart().startsWith("<")) {
+    throw new Error(`AI 服务返回了 HTML 页面，不是 JSON。请检查 Base URL 是否应以 /v1 结尾。响应预览：${preview}`);
   }
 
   try {
