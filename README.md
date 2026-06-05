@@ -17,6 +17,7 @@
 - 模型配置面板：开发/本地调试时可为单次转换配置 base URL、model、temperature 和一次性 API Key；生产环境使用服务端配置。
 - 本地项目草稿：可在浏览器 localStorage 保存、加载、删除当前小说/YAML/转换报告。
 - MySQL 基础持久化：提供项目、剧本版本和生成记录的服务端保存 API，localStorage 草稿仍保留。
+- 登录与服务端项目：支持邮箱密码登录、HttpOnly Cookie Session、项目按用户隔离和 `/projects` 服务端项目列表。
 - YAML Schema：使用 Zod 定义运行时 Schema，并提供设计说明文档。
 - YAML 编辑与校验：页面内编辑 YAML，实时显示 Schema 校验结果。
 - 剧本质量清单：把 Schema 与结构检查转成可读 checklist，提示哪些交付项已通过。
@@ -151,7 +152,7 @@ MYSQL_DSN=mysql://app_user:app_password@127.0.0.1:3306/qiniuyun
 MYSQL_CONNECTION_LIMIT=10
 ```
 
-Redis、登录、RBAC 和 AI 供应商配置入库仍是后续阶段。
+Redis、RBAC、Prompt 模板化和 AI 供应商配置加密入库仍是后续阶段。
 
 ## 本地文本导入
 
@@ -171,6 +172,12 @@ Redis、登录、RBAC 和 AI 供应商配置入库仍是后续阶段。
 - 删除草稿但不清空当前编辑区。
 
 草稿只写入浏览器 localStorage，不上传服务端，也不保存 API Key、Base URL、model、provider 或 temperature。
+
+## 登录与服务端项目
+
+P4 加入邮箱密码登录和 HttpOnly Cookie Session。未登录用户仍可完成题目三演示闭环：导入小说、生成 YAML、编辑校验、导出和 localStorage 草稿。
+
+登录用户可以把当前工作区保存为服务端项目，并在 `/projects` 中只看到自己的项目。服务端项目保存小说标题、小说正文、YAML 剧本版本和生成报告；不保存 API Key、Base URL、provider、model 或 temperature。
 
 ## 录屏演示步骤
 

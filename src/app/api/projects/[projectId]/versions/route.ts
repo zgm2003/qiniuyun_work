@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { readCurrentUser } from "@/app/api/_auth";
 import { createScriptVersion } from "@/lib/server/projects";
 
 const ConversionReportSchema = z.object({
@@ -46,10 +47,12 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const projectId = await readProjectId(context);
+    const user = await readCurrentUser();
     const version = await createScriptVersion({
       projectId,
       yaml: parsed.data.yaml,
-      report: parsed.data.report
+      report: parsed.data.report,
+      ownerUserId: user?.id
     });
     return NextResponse.json({ version }, { status: 201 });
   } catch (error) {
@@ -60,6 +63,10 @@ export async function POST(request: Request, context: RouteContext) {
 
     if (message.startsWith("YAML 未通过 Schema 校验")) {
       return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    if (message === "项目不存在") {
+      return NextResponse.json({ error: message }, { status: 404 });
     }
 
     return NextResponse.json({ error: "剧本版本保存失败" }, { status: 500 });

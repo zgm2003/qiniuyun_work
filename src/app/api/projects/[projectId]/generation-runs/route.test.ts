@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { recordGenerationRun } from "@/lib/server/projects";
+import { readCurrentUser } from "@/app/api/_auth";
 
 vi.mock("@/lib/server/projects", () => ({
   recordGenerationRun: vi.fn()
 }));
 
+vi.mock("@/app/api/_auth", () => ({
+  readCurrentUser: vi.fn()
+}));
+
 const recordGenerationRunMock = vi.mocked(recordGenerationRun);
+const readCurrentUserMock = vi.mocked(readCurrentUser);
 
 function jsonRequest(body: unknown): Request {
   return new Request("http://localhost/api/projects/project-1/generation-runs", {
@@ -23,6 +29,8 @@ function context(projectId = "project-1") {
 describe("POST /api/projects/[projectId]/generation-runs", () => {
   beforeEach(() => {
     recordGenerationRunMock.mockReset();
+    readCurrentUserMock.mockReset();
+    readCurrentUserMock.mockResolvedValue(null);
   });
 
   it("records a generation run", async () => {
@@ -54,7 +62,41 @@ describe("POST /api/projects/[projectId]/generation-runs", () => {
       provider: "openai-compatible",
       model: "gpt-5.5",
       status: "succeeded",
-      errorMessage: null
+      errorMessage: null,
+      ownerUserId: undefined
+    });
+  });
+
+  it("passes the current user id when writing owned generation runs", async () => {
+    readCurrentUserMock.mockResolvedValue({ id: "user-1", email: "author@example.com", name: "作者" });
+    recordGenerationRunMock.mockResolvedValue({
+      id: "run-1",
+      projectId: "project-1",
+      provider: "openai-compatible",
+      model: "gpt-5.5",
+      status: "succeeded",
+      errorMessage: null,
+      createdAt: "2026-06-05T01:00:00.000Z"
+    });
+
+    const response = await POST(
+      jsonRequest({
+        provider: "openai-compatible",
+        model: "gpt-5.5",
+        status: "succeeded",
+        errorMessage: null
+      }),
+      context()
+    );
+
+    expect(response.status).toBe(201);
+    expect(recordGenerationRunMock).toHaveBeenCalledWith({
+      projectId: "project-1",
+      provider: "openai-compatible",
+      model: "gpt-5.5",
+      status: "succeeded",
+      errorMessage: null,
+      ownerUserId: "user-1"
     });
   });
 
@@ -124,5 +166,24 @@ describe("POST /api/projects/[projectId]/generation-runs", () => {
 
     expect(response.status).toBe(500);
     expect(body.error).toBe("生成记录保存失败");
+  });
+
+  it("returns 404 when the owned project is not writable by the current user", async () => {
+    readCurrentUserMock.mockResolvedValue({ id: "user-2", email: "other@example.com", name: "其他作者" });
+    recordGenerationRunMock.mockRejectedValue(new Error("项目不存在"));
+
+    const response = await POST(
+      jsonRequest({
+        provider: "openai-compatible",
+        model: "gpt-5.5",
+        status: "failed",
+        errorMessage: "AI 服务请求失败：500"
+      }),
+      context()
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.error).toBe("项目不存在");
   });
 });

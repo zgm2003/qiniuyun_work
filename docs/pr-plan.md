@@ -57,20 +57,9 @@ npm run build
 | P1 | docs | product architecture and style guideline | 明确产品化架构边界和后续 UI 改动规则。 |
 | P2 | refactor/style | routed workspace shell | 将拥挤单页拆成 `/workspace`、`/script`、`/drafts`、`/report`，并调整为中性 SaaS / 管理台风格。 |
 | P3 | feat | database foundation | 接入 MySQL 基础持久化，保存项目、剧本版本和生成记录；localStorage 草稿保留，Redis/Auth/RBAC 后置。 |
-| P4 | planned | auth project ownership | 登录、会话、用户隔离和服务端项目列表；未登录仍可完成小说转 YAML 剧本演示闭环。 |
+| P4 | feat | auth project ownership | 登录、会话、用户隔离和服务端项目列表；未登录仍可完成小说转 YAML 剧本演示闭环。 |
 
 ## 下一阶段计划
-
-### PR 16：登录、用户隔离和服务端项目列表
-
-目标：让作者登录后保存和恢复自己的小说改编项目，不破坏未登录演示流程。
-
-验收：
-
-- 未登录仍可完成小说转 YAML 剧本、编辑、校验、导出。
-- 登录用户可以保存当前工作区到服务端。
-- `/projects` 只展示当前用户项目。
-- 用户不能加载或写入其他用户项目。
 
 ### PR 17：Prompt 模板化
 

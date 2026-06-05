@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { readCurrentUser } from "@/app/api/_auth";
 import { recordGenerationRun } from "@/lib/server/projects";
 
 const RecordGenerationRunRequestSchema = z.object({
@@ -39,18 +40,24 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const projectId = await readProjectId(context);
+    const user = await readCurrentUser();
     const run = await recordGenerationRun({
       projectId,
       provider: parsed.data.provider,
       model: parsed.data.model,
       status: parsed.data.status,
-      errorMessage: parsed.data.errorMessage ?? null
+      errorMessage: parsed.data.errorMessage ?? null,
+      ownerUserId: user?.id
     });
     return NextResponse.json({ run }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "生成记录保存失败";
     if (message === "projectId 不能为空") {
       return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    if (message === "项目不存在") {
+      return NextResponse.json({ error: message }, { status: 404 });
     }
 
     return NextResponse.json({ error: "生成记录保存失败" }, { status: 500 });

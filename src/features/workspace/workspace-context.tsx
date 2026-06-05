@@ -19,6 +19,12 @@ import { buildModelOptions } from "./model-options";
 import { fetchProviderModels } from "./model-list-client";
 import { buildConvertModelConfig, type RuntimeEnvironment } from "./model-request-config";
 import { DEFAULT_PRODUCT_MODEL, DEFAULT_PRODUCT_PROVIDER } from "./provider-options";
+import {
+  createServerProject,
+  saveServerScriptVersion,
+  type ServerProjectDetail,
+  updateServerProject
+} from "./server-projects-client";
 
 export type ProviderName = "mock" | "openai-compatible";
 
@@ -45,6 +51,8 @@ export type WorkspaceContextValue = {
   setErrorMessage: (value: string) => void;
   sourceMessage: string;
   draftMessage: string;
+  serverProjectId: string | null;
+  serverProjectMessage: string;
   provider: ProviderName;
   setProvider: (value: ProviderName) => void;
   baseUrl: string;
@@ -78,6 +86,8 @@ export type WorkspaceContextValue = {
   saveDraft: () => void;
   loadDraft: (draft: LocalProjectDraft) => void;
   deleteDraft: (draftId: string) => void;
+  loadServerProjectIntoWorkspace: (project: ServerProjectDetail) => void;
+  saveCurrentWorkspaceToServer: () => Promise<void>;
   fetchModels: () => Promise<void>;
   convert: () => void;
   downloadYaml: () => void;
@@ -174,6 +184,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const [sourceMessage, setSourceMessage] = useState("");
   const [draftMessage, setDraftMessage] = useState("");
+  const [serverProjectId, setServerProjectId] = useState<string | null>(null);
+  const [serverProjectMessage, setServerProjectMessage] = useState("");
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [provider, setProvider] = useState<ProviderName>(DEFAULT_PRODUCT_PROVIDER);
   const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
@@ -212,6 +224,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setModelListMessage(isProductionRuntime ? MODEL_LIST_PRODUCTION_MESSAGE : MODEL_LIST_DEVELOPMENT_MESSAGE);
     setDraftMessage("已加载样例，当前不绑定任何草稿。");
     setActiveDraftId(null);
+    setServerProjectId(null);
+    setServerProjectMessage("");
   }
 
   async function importNovelFile(file: File) {
@@ -237,6 +251,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setModelListMessage(isProductionRuntime ? MODEL_LIST_PRODUCTION_MESSAGE : MODEL_LIST_DEVELOPMENT_MESSAGE);
     setDraftMessage("已导入本地文本，当前不绑定任何草稿。");
     setActiveDraftId(null);
+    setServerProjectId(null);
+    setServerProjectMessage("");
   }
 
   function saveDraft() {
@@ -265,6 +281,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setError("");
     setDraftMessage(`已加载草稿：${draft.title}`);
     setActiveDraftId(draft.id);
+    setServerProjectId(null);
+    setServerProjectMessage("已加载本地草稿，当前不绑定服务端项目。");
   }
 
   function deleteDraft(draftId: string) {
@@ -274,6 +292,43 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setActiveDraftId(null);
     }
     setDraftMessage("已删除草稿。当前编辑区不会被清空。");
+  }
+
+  function loadServerProjectIntoWorkspace(project: ServerProjectDetail) {
+    setTitle(project.title);
+    setNovelText(project.sourceText);
+    setYamlText(project.latestVersion?.yaml ?? "");
+    setReport(project.latestVersion?.report ?? null);
+    setError("");
+    setSourceMessage(`已加载服务端项目：${project.title}`);
+    setDraftMessage("已加载服务端项目，localStorage 草稿未被修改。");
+    setServerProjectId(project.id);
+    setServerProjectMessage(`当前绑定服务端项目：${project.title}`);
+    setActiveDraftId(null);
+  }
+
+  async function saveCurrentWorkspaceToServer() {
+    setError("");
+    setServerProjectMessage("正在保存到服务端...");
+
+    try {
+      const savedProject = serverProjectId
+        ? await updateServerProject(serverProjectId, title, novelText)
+        : await createServerProject(title, novelText);
+      setServerProjectId(savedProject.id);
+
+      if (yamlValidation?.ok && report) {
+        await saveServerScriptVersion(savedProject.id, yamlText, report);
+        setServerProjectMessage(`已保存服务端项目和 YAML 版本：${savedProject.title}`);
+        return;
+      }
+
+      setServerProjectMessage(`已保存服务端项目：${savedProject.title}。YAML 通过校验并有转换报告后才会保存版本。`);
+    } catch (serverError) {
+      const message = serverError instanceof Error ? serverError.message : "服务端项目保存失败";
+      setError(message);
+      setServerProjectMessage(message);
+    }
   }
 
   async function fetchModels() {
@@ -381,6 +436,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setErrorMessage: setError,
     sourceMessage,
     draftMessage,
+    serverProjectId,
+    serverProjectMessage,
     provider,
     setProvider,
     baseUrl,
@@ -414,6 +471,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     saveDraft,
     loadDraft,
     deleteDraft,
+    loadServerProjectIntoWorkspace,
+    saveCurrentWorkspaceToServer,
     fetchModels,
     convert,
     downloadYaml,
