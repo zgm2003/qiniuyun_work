@@ -209,6 +209,55 @@ describe("ScriptDocumentSchema", () => {
     }
   });
 
+  it("rejects unknown JSON script document fields instead of stripping them", () => {
+    const result = parseScriptDocumentJson({
+      metadata: {
+        title: "雨夜来信",
+        source_chapters: 3,
+        language: "zh-CN",
+        format_version: "1.0",
+        unexpected: "must fail"
+      },
+      characters: [
+        {
+          id: "char_001",
+          name: "林夏",
+          role: "protagonist",
+          traits: ["谨慎"]
+        }
+      ],
+      scenes: [
+        {
+          id: "scene_001",
+          chapter: 1,
+          heading: "雨夜来信",
+          location: "旧书店",
+          time: "雨夜",
+          characters: ["char_001"],
+          action: "林夏收到匿名信。",
+          dialogue: [
+            {
+              character: "char_001",
+              line: "这是谁寄来的？",
+              emotion: "困惑"
+            }
+          ],
+          camera_notes: "推镜到信封。"
+        }
+      ],
+      summary: {
+        logline: "一个女孩追查匿名信背后的真相。",
+        themes: ["选择"],
+        adaptation_notes: ["保留悬疑节奏。"]
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors[0].path).toBe("metadata");
+    }
+  });
+
   it("exports a strict JSON Schema for Responses Structured Outputs", () => {
     expect(SCRIPT_DOCUMENT_JSON_SCHEMA).toMatchObject({
       type: "object",

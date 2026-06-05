@@ -8,20 +8,20 @@ export const ScriptMetadataSchema = z.object({
   source_chapters: z.number().int().min(3),
   language: NonEmptyString,
   format_version: NonEmptyString
-});
+}).strict();
 
 export const ScriptCharacterSchema = z.object({
   id: NonEmptyString,
   name: NonEmptyString,
   role: z.enum(["protagonist", "antagonist", "supporting", "narrator", "other"]),
   traits: z.array(NonEmptyString).min(1)
-});
+}).strict();
 
 export const ScriptDialogueSchema = z.object({
   character: NonEmptyString,
   line: NonEmptyString,
   emotion: NonEmptyString
-});
+}).strict();
 
 export const ScriptSceneSchema = z.object({
   id: NonEmptyString,
@@ -33,20 +33,20 @@ export const ScriptSceneSchema = z.object({
   action: NonEmptyString,
   dialogue: z.array(ScriptDialogueSchema).min(1),
   camera_notes: NonEmptyString
-});
+}).strict();
 
 export const ScriptSummarySchema = z.object({
   logline: NonEmptyString,
   themes: z.array(NonEmptyString).min(1),
   adaptation_notes: z.array(NonEmptyString).min(1)
-});
+}).strict();
 
 export const ScriptDocumentSchema = z.object({
   metadata: ScriptMetadataSchema,
   characters: z.array(ScriptCharacterSchema).min(1),
   scenes: z.array(ScriptSceneSchema).min(1),
   summary: ScriptSummarySchema
-});
+}).strict();
 
 export type ScriptDocument = z.infer<typeof ScriptDocumentSchema>;
 
