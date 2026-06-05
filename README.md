@@ -13,7 +13,7 @@
 - 本地文本导入：支持浏览器本地导入 `.txt` / `.md` 小说文本，不上传服务器。
 - 输入校验：少于 3 个章节直接报错，不生成假结果。
 - 剧本生成：产品界面默认使用 OpenAI-compatible 真实 AI provider。
-- 真实 AI 接口：调用 OpenAI 兼容 Chat Completions API。
+- 真实 AI 接口：生产默认调用 OpenAI 兼容 Responses API + Structured Outputs，开发可临时回退 Chat Completions。
 - 模型配置面板：开发/本地调试时可为单次转换配置 base URL、model、temperature 和一次性 API Key；生产环境使用服务端配置。
 - 本地项目草稿：可在浏览器 localStorage 保存、加载、删除当前小说/YAML/转换报告。
 - YAML Schema：使用 Zod 定义运行时 Schema，并提供设计说明文档。
@@ -124,12 +124,13 @@ npm run build
 AI_PROVIDER=openai-compatible
 OPENAI_COMPATIBLE_BASE_URL=https://api.openai.com/v1
 OPENAI_COMPATIBLE_MODEL=gpt-5.5
+OPENAI_COMPATIBLE_GENERATION_API=responses
 OPENAI_COMPATIBLE_API_KEY=your_api_key
 ```
 
 真实 AI 返回内容仍然必须通过本项目 YAML Schema 校验。校验失败会报错，不会静默兜底。开发/本地调试的 Base URL 可以填写服务根地址或 `/v1` 地址，系统会在缺少 `/v1` 时自动补齐；生产 Base URL 由服务端 env 或后续数据库配置持有。
 
-当前实现仍使用 OpenAI-compatible Chat Completions 调用；迁移到 Responses API 和 Structured Outputs 属于后续 P2，不和本次生产配置加固混在一起。
+生产默认使用 Responses API + Structured Outputs。模型先返回严格 JSON 剧本文档，服务端再转换为 YAML 给用户编辑和导出。开发排查时可以设置 `OPENAI_COMPATIBLE_GENERATION_API=chat-completions` 临时回到旧路径；生产目标是 `responses`。
 
 开发环境下，页面上的“模型配置”面板可以为单次转换覆盖 base URL、model、temperature 和一次性 API Key。生产环境应使用服务端配置，不接受浏览器传入 API Key、Base URL 或 model 覆盖。API Key 不写入仓库，也不进入 localStorage 草稿。
 

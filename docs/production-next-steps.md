@@ -18,16 +18,18 @@
 - localStorage 本地草稿。
 - 题目验收清单和 Schema 说明文档。
 
-当前不是假 AI demo。生产 AI 配置已加固为服务端持有，开发/本地调试仍保留请求级配置入口：
+当前不是假 AI demo。生产 AI 配置已加固为服务端持有，真实生成默认走 Responses API + Structured Outputs；开发/本地调试仍保留请求级配置入口：
 
 ```text
 生产：服务端 env 配置 Base URL / Model / API Key
 ↓
 请求 /api/convert
 ↓
-服务端调用 OpenAI-compatible Chat Completions
+服务端调用 OpenAI-compatible Responses API
 ↓
-返回 YAML
+返回严格 JSON 剧本文档
+↓
+服务端转换为 YAML
 ```
 
 开发：页面可临时填写 Base URL / Model / API Key，便于比赛演示和本地调试；生产请求不会接受这些浏览器覆盖。
@@ -95,17 +97,19 @@ npm run build
 - 不要把 API Key 写入仓库。
 - 不要把真实 API Key 返回给前端。
 - 不要删除测试用 `mock` 转换器。
-- 本阶段仍保留当前 OpenAI-compatible Chat Completions 调用；Responses API 和 Structured Outputs 迁移放到 P2，避免把生产配置加固和 API 迁移混成一个 PR。
+- P1 已完成生产配置加固；P2 已迁移到 Responses API + Structured Outputs。开发排查仍可临时回退 Chat Completions。
 
 ### P2：Responses API 与结构化输出
 
 目标：提高真实模型输出稳定性。
 
+状态：已实施。生产默认使用 `OPENAI_COMPATIBLE_GENERATION_API=responses`，开发排查可临时设为 `chat-completions`。
+
 设计文档：`docs/superpowers/specs/2026-06-05-responses-structured-output-design.md`
 
 实施计划：`docs/superpowers/plans/2026-06-05-responses-structured-output.md`
 
-当前实现让 AI 直接输出 YAML。上线版更稳的方式是：
+P2 后不再让生产模型直接输出 YAML。上线版生成方式是：
 
 ```text
 小说文本
@@ -121,12 +125,12 @@ Zod 校验
 前端编辑和导出 YAML
 ```
 
-必须做：
+已完成：
 
-- 新增 Responses API provider 路径。
+- 新增 Responses API 生成路径。
 - 用 JSON Schema 约束 AI 输出结构。
 - 保留 YAML 作为用户最终看到和导出的格式。
-- 继续用 `validateScriptYaml` 或等价 Zod 校验防止坏结构流出。
+- 继续用 `validateScriptYaml` 校验防止坏结构流出。
 - 测试 AI 返回 JSON、程序转 YAML、坏结构拒绝。
 
 建议文件：
@@ -325,10 +329,10 @@ src/features/workspace/workspace-context.tsx
 ```text
 1. 当前 AI 调用是怎么走的？
 2. 生产环境为什么不能让用户填写 API Key？
-3. 下一步应该做 P1 还是 P3，为什么？
+3. P2 完成后下一步应该做什么，为什么？
 ```
 
-正确答案应该是：先做 P1 真实 AI 生产化配置，再做 P3 MySQL 持久化。
+正确答案应该是：下一步做 P3 MySQL 基础持久化；Redis/Auth/RBAC 继续后置。
 
 ## 当前不要做
 
