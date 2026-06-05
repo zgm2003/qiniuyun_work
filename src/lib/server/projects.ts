@@ -83,6 +83,15 @@ type ProjectRow = RowDataPacket & {
   updated_at: Date;
 };
 
+type ScriptVersionRow = RowDataPacket & {
+  id: string;
+  project_id: string;
+  yaml: string;
+  report_json: string | ConversionReport;
+  validation_json: string | Extract<ScriptValidationResult, { ok: true }>;
+  created_at: Date;
+};
+
 function requireTrimmed(value: string, message: string): string {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -123,6 +132,38 @@ function mapProjectRow(row: ProjectRow): ProjectRecord {
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString()
   };
+}
+
+function parseJsonField<T>(value: string | T): T {
+  if (typeof value === "string") {
+    return JSON.parse(value) as T;
+  }
+
+  return value;
+}
+
+function mapScriptVersionRow(row: ScriptVersionRow): ScriptVersionRecord {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    yaml: row.yaml,
+    report: parseJsonField<ConversionReport>(row.report_json),
+    validation: parseJsonField<Extract<ScriptValidationResult, { ok: true }>>(row.validation_json),
+    createdAt: row.created_at.toISOString()
+  };
+}
+
+async function getLatestScriptVersion(projectId: string, runner: MysqlQueryRunner): Promise<ScriptVersionRecord | null> {
+  const [rows] = await runner.query<ScriptVersionRow[]>(
+    `SELECT id, project_id, yaml, report_json, validation_json, created_at
+     FROM script_versions
+     WHERE project_id = ?
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [projectId]
+  );
+
+  return rows[0] ? mapScriptVersionRow(rows[0]) : null;
 }
 
 export async function createProject(input: CreateProjectInput, runner?: MysqlQueryRunner): Promise<ProjectRecord> {
@@ -176,7 +217,8 @@ export async function getProjectForUser(
   ownerUserId: string,
   runner?: MysqlQueryRunner
 ): Promise<ProjectDetail | null> {
-  const [rows] = await resolveRunner(runner).query<ProjectRow[]>(
+  const db = resolveRunner(runner);
+  const [rows] = await db.query<ProjectRow[]>(
     `SELECT id, owner_user_id, title, source_text, status, created_at, updated_at
      FROM projects
      WHERE id = ? AND owner_user_id = ?
@@ -189,7 +231,7 @@ export async function getProjectForUser(
 
   return {
     ...mapProjectRow(rows[0]),
-    latestVersion: null
+    latestVersion: await getLatestScriptVersion(rows[0].id, db)
   };
 }
 

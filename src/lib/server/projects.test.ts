@@ -70,6 +70,14 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
     created_at: Date;
     updated_at: Date;
   }> = [];
+  scriptVersions: Array<{
+    id: string;
+    project_id: string;
+    yaml: string;
+    report_json: string;
+    validation_json: string;
+    created_at: Date;
+  }> = [];
 
   async query<T extends RowDataPacket[] | RowDataPacket[][] | ResultSetHeader>(
     sql: string,
@@ -110,6 +118,15 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
       return [
         this.projects.filter((project) => project.id === projectId && project.owner_user_id === ownerUserId) as RowDataPacket[] as T
       ];
+    }
+
+    if (sql.includes("FROM script_versions") && sql.includes("WHERE project_id = ?")) {
+      const [projectId] = values as [string];
+      const rows = this.scriptVersions
+        .filter((version) => version.project_id === projectId)
+        .sort((left, right) => right.created_at.getTime() - left.created_at.getTime())
+        .slice(0, 1);
+      return [rows as RowDataPacket[] as T];
     }
 
     if (sql.includes("UPDATE projects") && sql.includes("WHERE id = ? AND owner_user_id = ?")) {
@@ -306,6 +323,39 @@ describe("project persistence service", () => {
     const project = await createProject({ title: "用户 A 项目", sourceText: "原文 A", ownerUserId: "user-a" }, runner);
 
     await expect(getProjectForUser(project.id, "user-b", runner)).resolves.toBeNull();
+  });
+
+  it("loads the latest script version for the current user's project", async () => {
+    const runner = new FakeProjectStoreRunner();
+    const project = await createProject({ title: "用户 A 项目", sourceText: "原文 A", ownerUserId: "user-a" }, runner);
+    const generated = convertNovelToScript({ title: "用户 A 项目", text: validNovel });
+    runner.scriptVersions.push({
+      id: "version-old",
+      project_id: project.id,
+      yaml: "old yaml",
+      report_json: JSON.stringify({ ...generated.report, sceneCount: 1 }),
+      validation_json: JSON.stringify({ ok: true }),
+      created_at: new Date("2026-06-05T01:00:00.000Z")
+    });
+    runner.scriptVersions.push({
+      id: "version-new",
+      project_id: project.id,
+      yaml: generated.yaml,
+      report_json: JSON.stringify(generated.report),
+      validation_json: JSON.stringify({ ok: true }),
+      created_at: new Date("2026-06-05T02:00:00.000Z")
+    });
+
+    const detail = await getProjectForUser(project.id, "user-a", runner);
+
+    expect(detail?.latestVersion).toMatchObject({
+      id: "version-new",
+      projectId: project.id,
+      yaml: generated.yaml,
+      report: generated.report,
+      validation: { ok: true },
+      createdAt: "2026-06-05T02:00:00.000Z"
+    });
   });
 
   it("updates only projects owned by the current user", async () => {
