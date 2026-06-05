@@ -20,6 +20,48 @@ describe("convertNovelWithProvider", () => {
     expect(validateScriptYaml(result.yaml).ok).toBe(true);
   });
 
+  it("production defaults to openai-compatible when AI_PROVIDER is absent", async () => {
+    const aiYaml = convertNovelToScript({ title: "雨夜来信", text }).yaml;
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: aiYaml } }]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    const result = await convertNovelWithProvider(
+      { title: "雨夜来信", text },
+      {
+        NODE_ENV: "production",
+        OPENAI_COMPATIBLE_API_KEY: "test-key",
+        OPENAI_COMPATIBLE_BASE_URL: "https://llm.example.test/v1",
+        OPENAI_COMPATIBLE_MODEL: "demo-model"
+      },
+      fetchImpl
+    );
+
+    expect(result.report.provider).toBe("openai-compatible");
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(fetchImpl.mock.calls[0][0]).toBe("https://llm.example.test/v1/chat/completions");
+  });
+
+  it("production rejects request modelConfig selecting mock", async () => {
+    await expect(
+      convertNovelWithProvider(
+        { title: "雨夜来信", text },
+        {
+          NODE_ENV: "production",
+          AI_PROVIDER: "openai-compatible",
+          OPENAI_COMPATIBLE_API_KEY: "test-key"
+        },
+        fetch,
+        { provider: "mock" }
+      )
+    ).rejects.toThrow("生产环境不允许使用 mock provider");
+  });
+
   it("calls an OpenAI-compatible chat completions endpoint when configured", async () => {
     const aiYaml = convertNovelToScript({ title: "雨夜来信", text }).yaml;
     const fetchImpl = vi.fn(async () =>
@@ -94,6 +136,60 @@ describe("convertNovelWithProvider", () => {
     });
     expect(requestBody.model).toBe("request-model");
     expect(requestBody.temperature).toBe(0.7);
+  });
+
+  it("openai-compatible request body includes store:false", async () => {
+    const aiYaml = convertNovelToScript({ title: "雨夜来信", text }).yaml;
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: aiYaml } }]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    await convertNovelWithProvider(
+      { title: "雨夜来信", text },
+      {
+        AI_PROVIDER: "openai-compatible",
+        OPENAI_COMPATIBLE_API_KEY: "test-key"
+      },
+      fetchImpl
+    );
+
+    const requestBody = JSON.parse(String(fetchImpl.mock.calls[0][1]?.body)) as {
+      store?: boolean;
+    };
+
+    expect(requestBody.store).toBe(false);
+  });
+
+  it("uses the current target production model when no model is configured", async () => {
+    const aiYaml = convertNovelToScript({ title: "雨夜来信", text }).yaml;
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: aiYaml } }]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    await convertNovelWithProvider(
+      { title: "雨夜来信", text },
+      {
+        AI_PROVIDER: "openai-compatible",
+        OPENAI_COMPATIBLE_API_KEY: "test-key"
+      },
+      fetchImpl
+    );
+
+    const requestBody = JSON.parse(String(fetchImpl.mock.calls[0][1]?.body)) as {
+      model?: string;
+    };
+
+    expect(requestBody.model).toBe("gpt-5.5");
   });
 
   it("normalizes provider base URL by appending /v1 when it is missing", async () => {

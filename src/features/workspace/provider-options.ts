@@ -9,6 +9,7 @@ export type ProductProviderOption = {
 };
 
 export const DEFAULT_PRODUCT_PROVIDER: ProductProviderName = "openai-compatible";
+export const DEFAULT_PRODUCT_MODEL = "gpt-5.5";
 
 export const PRODUCT_PROVIDER_OPTIONS: ProductProviderOption[] = [
   {

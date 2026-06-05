@@ -17,7 +17,8 @@ import { validateScriptYaml, type ScriptValidationError } from "@/lib/script-sch
 import type { ConversionReport } from "@/lib/mock-converter";
 import { buildModelOptions } from "./model-options";
 import { fetchProviderModels } from "./model-list-client";
-import { DEFAULT_PRODUCT_PROVIDER } from "./provider-options";
+import { buildConvertModelConfig, type RuntimeEnvironment } from "./model-request-config";
+import { DEFAULT_PRODUCT_MODEL, DEFAULT_PRODUCT_PROVIDER } from "./provider-options";
 
 export type ProviderName = "mock" | "openai-compatible";
 
@@ -59,6 +60,7 @@ export type WorkspaceContextValue = {
   modelListStatus: ModelListStatus;
   modelListMessage: string;
   canFetchModels: boolean;
+  isProductionRuntime: boolean;
   isModelListPending: boolean;
   isPending: boolean;
   drafts: LocalProjectDraft[];
@@ -114,6 +116,8 @@ function createDraftId(): string {
 
 const EMPTY_DRAFTS: LocalProjectDraft[] = [];
 const LOCAL_DRAFTS_CHANGED_EVENT = "novel-to-script-ai:local-drafts-changed";
+const MODEL_LIST_DEVELOPMENT_MESSAGE = "填写 API Key 后可从供应商实时获取模型列表。";
+const MODEL_LIST_PRODUCTION_MESSAGE = "生产环境使用服务端 AI 配置，不从浏览器获取模型列表。";
 let cachedDraftsRaw: string | null | undefined;
 let cachedDrafts: LocalProjectDraft[] = EMPTY_DRAFTS;
 
@@ -162,6 +166,7 @@ function notifyLocalDraftsChanged() {
 }
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
+  const isProductionRuntime = process.env.NODE_ENV === "production";
   const [title, setTitle] = useState(SAMPLE_TITLE);
   const [novelText, setNovelText] = useState(SAMPLE_NOVEL);
   const [yamlText, setYamlText] = useState("");
@@ -172,12 +177,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [provider, setProvider] = useState<ProviderName>(DEFAULT_PRODUCT_PROVIDER);
   const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
-  const [model, setModel] = useState("gpt-4.1-mini");
+  const [model, setModel] = useState(DEFAULT_PRODUCT_MODEL);
   const [temperature, setTemperature] = useState(0.2);
   const [apiKey, setApiKey] = useState("");
   const [modelIds, setModelIds] = useState<string[]>([]);
   const [modelListStatus, setModelListStatus] = useState<ModelListStatus>("idle");
-  const [modelListMessage, setModelListMessage] = useState("填写 API Key 后可从供应商实时获取模型列表。");
+  const [modelListMessage, setModelListMessage] = useState(
+    isProductionRuntime ? MODEL_LIST_PRODUCTION_MESSAGE : MODEL_LIST_DEVELOPMENT_MESSAGE
+  );
   const [isModelListPending, setIsModelListPending] = useState(false);
   const [isPending, startTransition] = useTransition();
   const drafts = useSyncExternalStore(subscribeLocalDrafts, getLocalDraftsSnapshot, getServerDraftsSnapshot);
@@ -202,7 +209,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setSourceMessage("已加载样例文本，当前不绑定任何草稿。");
     setModelIds([]);
     setModelListStatus("idle");
-    setModelListMessage("填写 API Key 后可从供应商实时获取模型列表。");
+    setModelListMessage(isProductionRuntime ? MODEL_LIST_PRODUCTION_MESSAGE : MODEL_LIST_DEVELOPMENT_MESSAGE);
     setDraftMessage("已加载样例，当前不绑定任何草稿。");
     setActiveDraftId(null);
   }
@@ -227,7 +234,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setSourceMessage(`已导入 ${imported.fileName}，标题已设为“${imported.title}”。`);
     setModelIds([]);
     setModelListStatus("idle");
-    setModelListMessage("填写 API Key 后可从供应商实时获取模型列表。");
+    setModelListMessage(isProductionRuntime ? MODEL_LIST_PRODUCTION_MESSAGE : MODEL_LIST_DEVELOPMENT_MESSAGE);
     setDraftMessage("已导入本地文本，当前不绑定任何草稿。");
     setActiveDraftId(null);
   }
@@ -270,6 +277,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
 
   async function fetchModels() {
+    if (isProductionRuntime) {
+      setModelIds([]);
+      setModelListStatus("idle");
+      setModelListMessage(MODEL_LIST_PRODUCTION_MESSAGE);
+      return;
+    }
+
     setError("");
     setIsModelListPending(true);
     setModelListStatus("loading");
@@ -301,16 +315,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   function convert() {
     setError("");
     startTransition(async () => {
-      const modelConfig =
-        provider === "mock"
-          ? { provider }
-          : {
-              provider,
-              baseUrl: baseUrl.trim() || undefined,
-              model: model.trim() || undefined,
-              temperature,
-              apiKey: apiKey.trim() || undefined
-            };
+      const modelConfig = buildConvertModelConfig({
+        provider,
+        baseUrl,
+        model,
+        temperature,
+        apiKey,
+        nodeEnv: process.env.NODE_ENV as RuntimeEnvironment
+      });
       const response = await fetch("/api/convert", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -344,7 +356,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
 
   const canConvert = title.trim().length > 0 && novelText.trim().length > 0 && chapterOutline.ready;
-  const canFetchModels = provider === "openai-compatible" && Boolean(apiKey.trim());
+  const canFetchModels = !isProductionRuntime && provider === "openai-compatible" && Boolean(apiKey.trim());
   const modelOptions = useMemo(() => buildModelOptions(modelIds, model), [modelIds, model]);
   const validationText = yamlValidation
     ? yamlValidation.ok
@@ -384,6 +396,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     modelListStatus,
     modelListMessage,
     canFetchModels,
+    isProductionRuntime,
     isModelListPending,
     isPending,
     drafts,

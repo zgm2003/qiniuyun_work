@@ -95,6 +95,7 @@ export function WorkspacePage() {
                 value={workspace.provider}
                 options={PRODUCT_PROVIDER_OPTIONS}
                 onChange={workspace.setProvider}
+                disabled={workspace.isProductionRuntime}
               />
 
               <label>
@@ -111,59 +112,67 @@ export function WorkspacePage() {
               </label>
             </div>
 
-            <div className="model-live-fields">
-              <label>
-                <span>Base URL</span>
-                <input
-                  className="compact-input"
-                  value={workspace.baseUrl}
-                  onChange={(event) => workspace.setBaseUrl(event.target.value)}
-                  placeholder="https://api.openai.com/v1"
-                />
-              </label>
-              <div className="model-field-row">
-                <label className="model-field-main">
-                  <span>Model</span>
-                  {workspace.modelIds.length > 0 ? (
-                    <UiSelect
-                      hideLabel
-                      label="Model"
-                      value={workspace.model}
-                      options={workspace.modelOptions}
-                      onChange={workspace.setModel}
-                    />
-                  ) : (
-                    <input
-                      className="compact-input"
-                      value={workspace.model}
-                      onChange={(event) => workspace.setModel(event.target.value)}
-                      placeholder="gpt-4.1-mini"
-                    />
-                  )}
-                </label>
-                <button
-                  className="secondary-button model-fetch-button"
-                  type="button"
-                  disabled={!workspace.canFetchModels || workspace.isModelListPending}
-                  onClick={workspace.fetchModels}
-                >
-                  {workspace.isModelListPending ? "获取中..." : "获取模型"}
-                </button>
+            {workspace.isProductionRuntime ? (
+              <div className="model-live-fields" aria-label="生产模型配置说明">
+                <p className="model-list-message">
+                  使用服务端 AI 配置。普通用户不能查看或覆盖 API Key、Base URL 和 model；当前目标模型由服务端配置决定。
+                </p>
               </div>
-              <p className={workspace.modelListStatus === "error" ? "model-list-message error" : "model-list-message"}>
-                {workspace.modelListMessage}
-              </p>
-              <label>
-                <span>API Key（仅本次请求）</span>
-                <input
-                  className="compact-input sensitive-input"
-                  type="password"
-                  value={workspace.apiKey}
-                  onChange={(event) => workspace.setApiKey(event.target.value)}
-                  placeholder="不会保存到本地草稿或仓库"
-                />
-              </label>
-            </div>
+            ) : (
+              <div className="model-live-fields">
+                <label>
+                  <span>Base URL</span>
+                  <input
+                    className="compact-input"
+                    value={workspace.baseUrl}
+                    onChange={(event) => workspace.setBaseUrl(event.target.value)}
+                    placeholder="https://api.openai.com/v1"
+                  />
+                </label>
+                <div className="model-field-row">
+                  <label className="model-field-main">
+                    <span>Model</span>
+                    {workspace.modelIds.length > 0 ? (
+                      <UiSelect
+                        hideLabel
+                        label="Model"
+                        value={workspace.model}
+                        options={workspace.modelOptions}
+                        onChange={workspace.setModel}
+                      />
+                    ) : (
+                      <input
+                        className="compact-input"
+                        value={workspace.model}
+                        onChange={(event) => workspace.setModel(event.target.value)}
+                        placeholder="gpt-5.5"
+                      />
+                    )}
+                  </label>
+                  <button
+                    className="secondary-button model-fetch-button"
+                    type="button"
+                    disabled={!workspace.canFetchModels || workspace.isModelListPending}
+                    onClick={workspace.fetchModels}
+                  >
+                    {workspace.isModelListPending ? "获取中..." : "获取模型"}
+                  </button>
+                </div>
+                <p className={workspace.modelListStatus === "error" ? "model-list-message error" : "model-list-message"}>
+                  {workspace.modelListMessage}
+                </p>
+                <label>
+                  <span>API Key（仅本次请求）</span>
+                  <input
+                    className="compact-input sensitive-input"
+                    type="password"
+                    value={workspace.apiKey}
+                    onChange={(event) => workspace.setApiKey(event.target.value)}
+                    placeholder="不会保存到本地草稿或仓库"
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
           <label className="field-label" htmlFor="novel">
@@ -224,5 +233,4 @@ export function WorkspacePage() {
     </section>
   );
 }
-
 

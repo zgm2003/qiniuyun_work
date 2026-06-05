@@ -9,6 +9,10 @@ const ModelsRequestSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "生产环境不支持从浏览器获取模型列表" }, { status: 400 });
+  }
+
   let payload: unknown;
 
   try {

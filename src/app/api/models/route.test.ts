@@ -55,6 +55,27 @@ describe("POST /api/models", () => {
     expect(body.error).toBe("只支持 OpenAI-compatible 模型列表");
   });
 
+  it("does not accept browser model-list credentials in production", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    vi.stubEnv("NODE_ENV", "production");
+
+    try {
+      const response = await POST(
+        jsonRequest({
+          provider: "openai-compatible",
+          apiKey: "request-key",
+          baseUrl: "https://llm.example.test/v1"
+        })
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(body.error).toBe("生产环境不支持从浏览器获取模型列表");
+    } finally {
+      vi.stubEnv("NODE_ENV", originalNodeEnv);
+    }
+  });
+
   it("returns 400 when API key is empty", async () => {
     const response = await POST(
       jsonRequest({

@@ -15,7 +15,7 @@ npm run dev
 2. 点击“导入文本”，选择 `samples/novel-3chapters.txt`；如果现场不方便选文件，可以点击“加载样例”恢复同一类输入。
 3. 指出标题由文件名生成，且“章节大纲预览”识别出 3 个章节，显示每章标题、字数和正文预览。
 4. 展示“模型配置”面板：Provider 为 OpenAI-compatible，不再暴露测试用 provider。
-5. 填写 base URL、model、temperature 和一次性 API Key；说明 API Key 只用于本次请求。
+5. 本地开发录屏可填写 base URL、model、temperature 和一次性 API Key；生产录屏使用服务端 AI 配置，不展示也不填写浏览器侧 API Key/Base URL/model。
 6. 点击“转换为 YAML 剧本”。
 7. 切到“剧本审查”，展示 YAML 包含 `metadata`、`characters`、`scenes`、`summary`。
 8. 展示“剧本质量清单”：Schema、元信息、角色、场景、台词、引用、总结全部通过。
