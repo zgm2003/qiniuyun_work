@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState, useTransition } from "react";
+import { fetchCurrentUser, logout, type UserSummary } from "@/features/auth/auth-client";
 import { getActiveWorkbenchRoute, WORKBENCH_NAV_ITEMS } from "./workbench-nav";
 import { useWorkspace } from "./workspace-context";
 
@@ -10,6 +11,34 @@ export function WorkbenchShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const activeRoute = getActiveWorkbenchRoute(pathname);
   const { model } = useWorkspace();
+  const [user, setUser] = useState<UserSummary | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    let ignore = false;
+    fetchCurrentUser()
+      .then((currentUser) => {
+        if (!ignore) {
+          setUser(currentUser);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setUser(null);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  function handleLogout() {
+    startTransition(async () => {
+      await logout();
+      setUser(null);
+    });
+  }
 
   return (
     <>
@@ -29,7 +58,19 @@ export function WorkbenchShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          <span className="nav-status">{model}</span>
+          <div className="nav-account">
+            <span className="nav-status">{user ? user.email : model}</span>
+            {user ? (
+              <button className="ghost-button nav-auth-button" type="button" disabled={isPending} onClick={handleLogout}>
+                退出
+              </button>
+            ) : (
+              <span className="nav-auth-links">
+                <Link href="/login">登录</Link>
+                <Link href="/register">注册</Link>
+              </span>
+            )}
+          </div>
         </div>
       </header>
 
