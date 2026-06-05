@@ -59,7 +59,12 @@ export function buildScriptPromptVariables(input: NovelConversionInput): PromptT
 }
 
 export function renderPromptTemplate(template: string, variables: PromptTemplateVariables): string {
-  return template.replace(/{{\s*([a-z_]+)\s*}}/g, (_match, variableName: string) => {
+  return template.replace(/{{\s*([^}]+?)\s*}}/g, (_match, rawVariableName: string) => {
+    const variableName = rawVariableName.trim();
+    if (!/^[a-z_]+$/.test(variableName)) {
+      throw new Error(`Prompt 模板包含无法识别的占位符：${variableName}`);
+    }
+
     if (!ALLOWED_VARIABLES.includes(variableName as PromptTemplateVariableName)) {
       throw new Error(`Prompt 模板包含不支持的变量：${variableName}`);
     }

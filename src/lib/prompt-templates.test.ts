@@ -55,6 +55,10 @@ describe("renderPromptTemplate", () => {
     expect(() => renderPromptTemplate("{{title}} {{unknown}}", variables)).toThrow("Prompt 模板包含不支持的变量：unknown");
   });
 
+  it("rejects malformed placeholders instead of leaking them to the provider", () => {
+    expect(() => renderPromptTemplate("{{title}} {{bad-name}}", variables)).toThrow("Prompt 模板包含无法识别的占位符：bad-name");
+  });
+
   it("rejects blank variable values instead of hiding data flow bugs", () => {
     expect(() => renderPromptTemplate("{{title}}", { ...variables, title: "" })).toThrow("Prompt 模板变量不能为空：title");
   });
