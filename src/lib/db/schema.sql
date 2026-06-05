@@ -56,3 +56,17 @@ CREATE TABLE IF NOT EXISTS generation_runs (
   KEY idx_generation_runs_project_created (project_id, created_at),
   CONSTRAINT fk_generation_runs_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS prompt_templates (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  template_key VARCHAR(100) NOT NULL,
+  version VARCHAR(32) NOT NULL,
+  format ENUM('yaml', 'json') NOT NULL,
+  system_prompt TEXT NOT NULL,
+  user_prompt_template MEDIUMTEXT NOT NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uk_prompt_templates_key_version (template_key, version),
+  KEY idx_prompt_templates_lookup (template_key, enabled, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

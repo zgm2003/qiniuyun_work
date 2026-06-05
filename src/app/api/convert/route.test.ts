@@ -20,6 +20,19 @@ function jsonRequest(body: unknown): Request {
   });
 }
 
+type ChatRequestBody = {
+  model: string;
+  temperature: number;
+  messages: Array<{ role: "system" | "user"; content: string }>;
+};
+
+type ResponsesRequestBody = {
+  model: string;
+  temperature: number;
+  instructions: string;
+  input: string;
+};
+
 describe("POST /api/convert", () => {
   it("returns script YAML and report for valid input", async () => {
     const response = await POST(jsonRequest({ title: "雨夜来信", text: validText }));
@@ -76,10 +89,7 @@ describe("POST /api/convert", () => {
         })
       );
       const body = await response.json();
-      const requestBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as {
-        model: string;
-        temperature: number;
-      };
+      const requestBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as ChatRequestBody;
 
       expect(response.status).toBe(200);
       expect(body.report.provider).toBe("openai-compatible");
@@ -88,6 +98,11 @@ describe("POST /api/convert", () => {
         model: "request-model",
         temperature: 0.4
       });
+      expect(requestBody.messages[0].content).toContain("YAML");
+      expect(requestBody.messages[1].content).toContain("结构要求");
+      expect(requestBody.messages[1].content).toContain("质量规则");
+      expect(requestBody.messages[1].content).toContain("第1章 雨夜来信");
+      expect(requestBody.messages[1].content).not.toContain("{{title}}");
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -134,10 +149,7 @@ describe("POST /api/convert", () => {
         })
       );
       const body = await response.json();
-      const requestBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as {
-        model: string;
-        temperature: number;
-      };
+      const requestBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as ChatRequestBody;
 
       expect(response.status).toBe(200);
       expect(body.report.provider).toBe("openai-compatible");
@@ -149,6 +161,11 @@ describe("POST /api/convert", () => {
         model: "env-model",
         temperature: 0.4
       });
+      expect(requestBody.messages[0].content).toContain("YAML");
+      expect(requestBody.messages[1].content).toContain("结构要求");
+      expect(requestBody.messages[1].content).toContain("质量规则");
+      expect(requestBody.messages[1].content).toContain("第1章 雨夜来信");
+      expect(requestBody.messages[1].content).not.toContain("{{title}}");
     } finally {
       globalThis.fetch = originalFetch;
       vi.stubEnv("NODE_ENV", originalNodeEnv);
@@ -210,10 +227,7 @@ describe("POST /api/convert", () => {
         })
       );
       const body = await response.json();
-      const requestBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as {
-        model: string;
-        temperature: number;
-      };
+      const requestBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as ResponsesRequestBody;
       const serializedRequestBody = JSON.stringify(requestBody);
 
       expect(response.status).toBe(200);
@@ -226,6 +240,11 @@ describe("POST /api/convert", () => {
         model: "env-model",
         temperature: 0.4
       });
+      expect(requestBody.instructions).toContain("JSON");
+      expect(requestBody.input).toContain("结构要求");
+      expect(requestBody.input).toContain("质量规则");
+      expect(requestBody.input).toContain("第1章 雨夜来信");
+      expect(requestBody.input).not.toContain("{{title}}");
       expect(serializedRequestBody).not.toContain("request-key");
       expect(serializedRequestBody).not.toContain("request-model");
       expect(serializedRequestBody).not.toContain("request.example.test");
