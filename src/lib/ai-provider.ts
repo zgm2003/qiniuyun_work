@@ -3,8 +3,11 @@ import { DEFAULT_OPENAI_BASE_URL, normalizeOpenAIBaseUrl } from "./openai-compat
 import {
   validateScriptYaml,
   type ScriptDocument,
-  type ScriptValidationError
+  type ScriptValidationError,
+  parseScriptDocumentJson,
+  SCRIPT_DOCUMENT_JSON_SCHEMA
 } from "./script-schema";
+import { scriptDocumentToValidatedYaml } from "./script-yaml";
 import {
   convertNovelToScript,
   type ConversionReport,
@@ -25,6 +28,7 @@ export type RequestModelConfig = {
 };
 
 const DEFAULT_MODEL = "gpt-5.5";
+type OpenAICompatibleGenerationApi = "chat-completions" | "responses";
 
 function stripYamlFence(content: string): string {
   const trimmed = content.trim();
@@ -38,6 +42,19 @@ function joinValidationErrors(errors: ScriptValidationError[]): string {
 
 function countDialogue(document: ScriptDocument): number {
   return document.scenes.reduce((count, scene) => count + scene.dialogue.length, 0);
+}
+
+function resolveGenerationApi(env: ProviderEnvironment): OpenAICompatibleGenerationApi {
+  const configured = env.OPENAI_COMPATIBLE_GENERATION_API;
+  if (!configured) {
+    return env.NODE_ENV === "production" ? "responses" : "chat-completions";
+  }
+
+  if (configured === "chat-completions" || configured === "responses") {
+    return configured;
+  }
+
+  throw new Error(`不支持的 OPENAI_COMPATIBLE_GENERATION_API：${configured}`);
 }
 
 function buildReport(provider: ConversionReport["provider"], document: ScriptDocument): ConversionReport {
@@ -137,6 +154,60 @@ async function readOpenAICompatiblePayload(response: Response): Promise<{
   }
 }
 
+type ResponsesPayload = {
+  output?: Array<{
+    type?: string;
+    content?: Array<{
+      type?: string;
+      text?: string;
+      refusal?: string;
+    }>;
+  }>;
+};
+
+async function readOpenAIResponsesPayload(response: Response): Promise<ResponsesPayload> {
+  const contentType = response.headers.get("content-type") ?? "";
+  const bodyText = await response.text();
+  const preview = bodyText.trim().replace(/\s+/g, " ").slice(0, 160);
+
+  if (contentType.toLowerCase().includes("text/html") || bodyText.trimStart().startsWith("<")) {
+    throw new Error(`AI 服务返回了 HTML 页面，不是 JSON。请检查 Base URL 是否应以 /v1 结尾。响应预览：${preview}`);
+  }
+
+  try {
+    return JSON.parse(bodyText) as ResponsesPayload;
+  } catch {
+    throw new Error(`AI 服务返回了无法解析的 JSON。响应预览：${preview}`);
+  }
+}
+
+function parseResponsesScriptDocument(payload: ResponsesPayload): ScriptDocument {
+  const content = payload.output?.flatMap((item) => (item.type === "message" ? item.content ?? [] : [])) ?? [];
+  const refusal = content.find((item) => item.type === "refusal")?.refusal;
+  if (refusal) {
+    throw new Error(`AI 拒绝生成剧本：${refusal}`);
+  }
+
+  const text = content.find((item) => item.type === "output_text")?.text;
+  if (!text) {
+    throw new Error("AI 服务没有返回结构化剧本内容");
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("AI 服务返回了无法解析的 JSON");
+  }
+
+  const validation = parseScriptDocumentJson(parsed);
+  if (!validation.ok) {
+    throw new Error(`AI 返回的剧本文档未通过 Schema 校验：${joinValidationErrors(validation.errors)}`);
+  }
+
+  return validation.document;
+}
+
 async function convertWithOpenAICompatible(
   input: NovelConversionInput,
   env: ProviderEnvironment,
@@ -196,6 +267,57 @@ async function convertWithOpenAICompatible(
   };
 }
 
+async function convertWithOpenAIResponses(
+  input: NovelConversionInput,
+  env: ProviderEnvironment,
+  fetchImpl: FetchImplementation,
+  modelConfig?: RequestModelConfig
+): Promise<NovelConversionResult> {
+  const apiKey = modelConfig?.apiKey || env.OPENAI_COMPATIBLE_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_COMPATIBLE_API_KEY 未配置");
+  }
+
+  const baseUrl = normalizeOpenAIBaseUrl(modelConfig?.baseUrl ?? env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_OPENAI_BASE_URL);
+  const model = modelConfig?.model ?? env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_MODEL;
+  const temperature = modelConfig?.temperature ?? 0.2;
+  const response = await fetchImpl(`${baseUrl}/responses`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      store: false,
+      temperature,
+      instructions: "你是小说改编剧本助手。只返回符合 JSON Schema 的剧本文档，不要解释。",
+      input: buildPrompt(input),
+      text: {
+        format: {
+          type: "json_schema",
+          name: "script_document",
+          strict: true,
+          schema: SCRIPT_DOCUMENT_JSON_SCHEMA
+        }
+      }
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`AI 服务请求失败：${response.status}`);
+  }
+
+  const payload = await readOpenAIResponsesPayload(response);
+  const document = parseResponsesScriptDocument(payload);
+  const yaml = scriptDocumentToValidatedYaml(document);
+
+  return {
+    yaml,
+    report: buildReport("openai-compatible", document)
+  };
+}
+
 export async function convertNovelWithProvider(
   input: NovelConversionInput,
   env: ProviderEnvironment = process.env,
@@ -215,6 +337,10 @@ export async function convertNovelWithProvider(
   }
 
   if (provider === "openai-compatible") {
+    if (resolveGenerationApi(env) === "responses") {
+      return convertWithOpenAIResponses(input, env, fetchImpl, modelConfig);
+    }
+
     return convertWithOpenAICompatible(input, env, fetchImpl, modelConfig);
   }
 
