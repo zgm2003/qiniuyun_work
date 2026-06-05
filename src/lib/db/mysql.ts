@@ -4,8 +4,8 @@ export type MysqlEnvironment = Record<string, string | undefined>;
 export type MysqlQueryRunner = {
   query<T extends RowDataPacket[] | RowDataPacket[][] | ResultSetHeader>(
     sql: string,
-    values?: readonly unknown[]
-  ): Promise<[T]>;
+    values?: unknown[]
+  ): Promise<[T, ...unknown[]]>;
 };
 
 export type MysqlTransactionConnection = MysqlQueryRunner & {

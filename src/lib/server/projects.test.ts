@@ -20,7 +20,7 @@ const validNovel = `第1章 雨夜来信
 
 type QueryCall = {
   sql: string;
-  values: readonly unknown[] | undefined;
+  values: unknown[] | undefined;
 };
 
 class FakeRunner implements MysqlQueryRunner {
@@ -28,8 +28,8 @@ class FakeRunner implements MysqlQueryRunner {
 
   async query<T extends RowDataPacket[] | RowDataPacket[][] | ResultSetHeader>(
     sql: string,
-    values?: readonly unknown[]
-  ): Promise<[T]> {
+    values?: unknown[]
+  ): Promise<[T, ...unknown[]]> {
     this.calls.push({ sql, values });
     return [{} as T];
   }
