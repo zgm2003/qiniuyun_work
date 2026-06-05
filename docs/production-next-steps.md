@@ -235,9 +235,77 @@ JWT 存 localStorage
 - `src/app/api/auth/*`
 - `src/lib/server/projects.ts`
 
-### P5：简单 RBAC 和管理端骨架
+### P5：Prompt 模板化
 
-目标：区分管理员和普通用户。
+目标：把当前写在代码里的生成 Prompt 迁移成可测试、可版本化的模板模块，但不改变题目三 YAML 输出协议。
+
+第一版只支持固定变量：
+
+```text
+{{title}}
+{{chapter_count}}
+{{chapters}}
+{{schema_summary}}
+```
+
+必须做：
+
+- 从 `src/lib/ai-provider.ts` 拆出 Prompt 构建逻辑。
+- 增加 `prompt_templates` 表或等价初始化数据结构。
+- 模板渲染只允许固定变量替换，不允许任意 JS、复杂表达式或插件系统。
+- 运行时输出仍必须通过 `ScriptDocument` / YAML Schema 校验。
+- 保留当前默认模板作为 fallback，避免模板数据缺失导致生产转换不可用。
+
+不要做：
+
+```text
+任意脚本执行
+复杂 Prompt 工作流编排
+Prompt 市场
+多租户模板继承
+```
+
+### P6：AI 供应商配置加密入库
+
+目标：平台统一管理 AI Key、Base URL、模型和健康状态。Key 必须加密后入库，前端永远不显示明文。
+
+建议表：
+
+```text
+ai_providers
+- id
+- name
+- driver
+- base_url
+- api_key_ciphertext
+- api_key_iv
+- api_key_auth_tag
+- api_key_version
+- status
+- health_status
+- created_at
+- updated_at
+
+ai_provider_models
+- id
+- provider_id
+- model_id
+- display_name
+- enabled
+```
+
+必须做：
+
+- API Key 使用 AES-256-GCM 加密后入库。
+- 主密钥只来自服务端 env，不入库，不返回前端。
+- 前端只显示 masked key 状态。
+- 管理端可以刷新模型列表。
+- 工作台只使用已启用 provider 和 model。
+- 保留 `OPENAI_COMPATIBLE_*` env fallback，避免数据库配置异常时生产转换直接瘫痪。
+
+### P7：简单 RBAC 和管理端骨架
+
+目标：区分管理员和普通用户，为 Prompt 模板与 AI 供应商配置提供最小管理入口。
 
 第一版只需要：
 
@@ -259,40 +327,7 @@ member
 - `src/app/(admin)/*`
 - `src/features/admin/*`
 
-### P6：AI 供应商配置入库
-
-目标：平台统一管理 AI Key、Base URL、模型和健康状态。
-
-建议表：
-
-```text
-ai_providers
-- id
-- name
-- driver
-- base_url
-- api_key_ciphertext
-- status
-- health_status
-- created_at
-- updated_at
-
-ai_provider_models
-- id
-- provider_id
-- model_id
-- display_name
-- enabled
-```
-
-必须做：
-
-- API Key 加密后入库。
-- 前端只显示 masked key 状态。
-- 管理端可以刷新模型列表。
-- 工作台只使用已启用 provider 和 model。
-
-### P7：Redis 与异步任务
+### P8：Redis 与异步任务
 
 目标：支持长小说转换、任务状态和限流。
 
@@ -334,12 +369,12 @@ src/features/workspace/workspace-context.tsx
 3. P2 完成后下一步应该做什么，为什么？
 ```
 
-正确答案应该是：P3 MySQL 基础持久化已完成基础层；下一步做 P4 登录与会话，Redis/RBAC 继续后置。
+正确答案应该是：P3 MySQL 基础持久化已完成基础层；下一步做 P4 登录与会话和用户隔离；随后 P5 Prompt 模板化、P6 AI 供应商配置加密入库；Redis 和完整 RBAC 继续后置。
 
 ## 当前不要做
 
 - 不要马上接 Redis。
-- 不要马上做完整 RBAC。
+- 不要马上做完整 RBAC；先做 P4 用户隔离，再做 P5 Prompt 模板化和 P6 AI 配置加密入库。
 - 不要把 scene、dialogue、character 全拆表。
 - 不要删除 `mock` 测试转换器。
 - 不要把生产 API Key 写到代码或文档。
