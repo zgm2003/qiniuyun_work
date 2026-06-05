@@ -152,7 +152,7 @@ MYSQL_DSN=mysql://app_user:app_password@127.0.0.1:3306/qiniuyun
 MYSQL_CONNECTION_LIMIT=10
 ```
 
-Redis、RBAC、Prompt 模板化和 AI 供应商配置加密入库仍是后续阶段。
+Redis、RBAC 和 AI 供应商配置加密入库仍是后续阶段；Prompt 模板化已完成基础模块和默认 fallback。
 
 ## 本地文本导入
 
@@ -178,6 +178,10 @@ Redis、RBAC、Prompt 模板化和 AI 供应商配置加密入库仍是后续阶
 P4 加入邮箱密码登录和 HttpOnly Cookie Session。未登录用户仍可完成题目三演示闭环：导入小说、生成 YAML、编辑校验、导出和 localStorage 草稿。
 
 登录用户可以把当前工作区保存为服务端项目，并在 `/projects` 中只看到自己的项目。服务端项目保存小说标题、小说正文、YAML 剧本版本和生成报告；不保存 API Key、Base URL、provider、model 或 temperature。
+
+## Prompt 模板化
+
+P5 将小说转剧本 Prompt 拆成版本化模板。运行时只允许固定变量替换：标题、章节数、章节正文、Schema 摘要和质量规则。数据库模板缺失或读取失败时使用默认模板 fallback，转换结果仍必须通过 `ScriptDocument` / YAML Schema 校验。
 
 ## 录屏演示步骤
 

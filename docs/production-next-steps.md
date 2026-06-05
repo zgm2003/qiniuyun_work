@@ -241,6 +241,8 @@ JWT 存 localStorage
 
 ### P5：Prompt 模板化
 
+状态：已实施基础模块。
+
 目标：把当前写在代码里的生成 Prompt 迁移成可测试、可版本化的模板模块，但不改变题目三 YAML 输出协议。
 
 第一版只支持固定变量：
@@ -250,6 +252,7 @@ JWT 存 localStorage
 {{chapter_count}}
 {{chapters}}
 {{schema_summary}}
+{{quality_rules}}
 ```
 
 必须做：
@@ -373,12 +376,12 @@ src/features/workspace/workspace-context.tsx
 3. P2 完成后下一步应该做什么，为什么？
 ```
 
-正确答案应该是：P3 MySQL 基础持久化已完成基础层；下一步做 P4 登录与会话和用户隔离；随后 P5 Prompt 模板化、P6 AI 供应商配置加密入库；Redis 和完整 RBAC 继续后置。
+正确答案应该是：P3 MySQL 基础持久化、P4 登录与用户隔离、P5 Prompt 模板化基础模块已完成；下一步做 P6 AI 供应商配置加密入库；Redis 和完整 RBAC 继续后置。
 
 ## 当前不要做
 
 - 不要马上接 Redis。
-- 不要马上做完整 RBAC；先做 P4 用户隔离，再做 P5 Prompt 模板化和 P6 AI 配置加密入库。
+- 不要马上做完整 RBAC；下一步先做 P6 AI 配置加密入库。
 - 不要把 scene、dialogue、character 全拆表。
 - 不要删除 `mock` 测试转换器。
 - 不要把生产 API Key 写到代码或文档。

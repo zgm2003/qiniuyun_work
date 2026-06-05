@@ -58,12 +58,9 @@ npm run build
 | P2 | refactor/style | routed workspace shell | 将拥挤单页拆成 `/workspace`、`/script`、`/drafts`、`/report`，并调整为中性 SaaS / 管理台风格。 |
 | P3 | feat | database foundation | 接入 MySQL 基础持久化，保存项目、剧本版本和生成记录；localStorage 草稿保留，Redis/Auth/RBAC 后置。 |
 | P4 | feat | auth project ownership | 登录、会话、用户隔离和服务端项目列表；未登录仍可完成小说转 YAML 剧本演示闭环。 |
+| P5 | feat | prompt template management | Prompt 模板化；固定变量渲染，输出仍受 YAML Schema 约束。 |
 
 ## 下一阶段计划
-
-### PR 17：Prompt 模板化
-
-目标：把当前写在代码里的 Prompt 拆成固定变量模板，仍然强制通过 `ScriptDocument` / YAML Schema 校验。
 
 ### PR 18：AI 供应商配置加密入库
 
