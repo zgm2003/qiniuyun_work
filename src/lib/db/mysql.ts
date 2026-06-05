@@ -8,6 +8,17 @@ export type MysqlQueryRunner = {
   ): Promise<[T]>;
 };
 
+export type MysqlTransactionConnection = MysqlQueryRunner & {
+  beginTransaction(): Promise<void>;
+  commit(): Promise<void>;
+  rollback(): Promise<void>;
+  release(): void;
+};
+
+export type MysqlTransactionRunner = MysqlQueryRunner & {
+  getConnection(): Promise<MysqlTransactionConnection>;
+};
+
 let pool: Pool | null = null;
 
 function parsePort(value: string | undefined): number {
