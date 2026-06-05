@@ -79,6 +79,8 @@ describe("project persistence service", () => {
     expect(runner.calls[0].sql).toContain("INSERT INTO projects");
     expect(runner.calls[0].values?.[1]).toBe("雨夜来信");
     expect(runner.calls[0].values?.[3]).toBe("draft");
+    expect(runner.calls[0].values?.[4]).toBeInstanceOf(Date);
+    expect(runner.calls[0].values?.[5]).toBeInstanceOf(Date);
   });
 
   it("rejects blank project titles instead of inventing a default", async () => {
@@ -144,6 +146,7 @@ describe("project persistence service", () => {
     expect(JSON.parse(String(insertCall?.values?.[3]))).toEqual(generated.report);
     expect(JSON.parse(String(insertCall?.values?.[4]))).toMatchObject({ ok: true });
     expect(updateCall?.values?.[0]).toBe("generated");
+    expect(updateCall?.values?.[1]).toBeInstanceOf(Date);
     expect(updateCall?.values?.[2]).toBe("project-1");
   });
 
@@ -195,5 +198,6 @@ describe("project persistence service", () => {
     expect(runner.calls[0].sql).toContain("INSERT INTO generation_runs");
     expect(runner.calls[0].values?.[4]).toBe("failed");
     expect(runner.calls[0].values?.[5]).toBe("AI 服务请求失败：500");
+    expect(runner.calls[0].values?.[6]).toBeInstanceOf(Date);
   });
 });

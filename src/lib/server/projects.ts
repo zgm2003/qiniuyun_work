@@ -56,10 +56,6 @@ export type RecordGenerationRunInput = {
   errorMessage?: string | null;
 };
 
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
 function requireTrimmed(value: string, message: string): string {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -95,13 +91,14 @@ export async function createProject(input: CreateProjectInput, runner?: MysqlQue
   const sourceText = requireNonBlank(input.sourceText, "小说正文不能为空");
   const id = randomUUID();
   const status: ProjectStatus = "draft";
-  const createdAt = nowIso();
+  const createdAtDate = new Date();
+  const createdAt = createdAtDate.toISOString();
   const updatedAt = createdAt;
 
   await resolveRunner(runner).query<ResultSetHeader>(
     `INSERT INTO projects (id, title, source_text, status, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, title, sourceText, status, createdAt, updatedAt]
+    [id, title, sourceText, status, createdAtDate, createdAtDate]
   );
 
   return {
@@ -130,7 +127,8 @@ export async function createScriptVersion(
   }
 
   const id = randomUUID();
-  const createdAt = nowIso();
+  const createdAtDate = new Date();
+  const createdAt = createdAtDate.toISOString();
   const db = resolveTransactionRunner(runner);
   const connection: MysqlTransactionConnection = await db.getConnection();
 
@@ -139,13 +137,13 @@ export async function createScriptVersion(
     await connection.query<ResultSetHeader>(
       `INSERT INTO script_versions (id, project_id, yaml, report_json, validation_json, created_at)
        VALUES (?, ?, ?, CAST(? AS JSON), CAST(? AS JSON), ?)`,
-      [id, projectId, yaml, JSON.stringify(input.report), JSON.stringify(validation), createdAt]
+      [id, projectId, yaml, JSON.stringify(input.report), JSON.stringify(validation), createdAtDate]
     );
     await connection.query<ResultSetHeader>(
       `UPDATE projects
        SET status = ?, updated_at = ?
        WHERE id = ?`,
-      ["generated", createdAt, projectId]
+      ["generated", createdAtDate, projectId]
     );
     await connection.commit();
   } catch (error) {
@@ -172,13 +170,14 @@ export async function recordGenerationRun(
   const projectId = requireTrimmed(input.projectId, "projectId 不能为空");
   const model = requireTrimmed(input.model, "model 不能为空");
   const id = randomUUID();
-  const createdAt = nowIso();
+  const createdAtDate = new Date();
+  const createdAt = createdAtDate.toISOString();
   const errorMessage = input.errorMessage ?? null;
 
   await resolveRunner(runner).query<ResultSetHeader>(
     `INSERT INTO generation_runs (id, project_id, provider, model, status, error_message, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, projectId, input.provider, model, input.status, errorMessage, createdAt]
+    [id, projectId, input.provider, model, input.status, errorMessage, createdAtDate]
   );
 
   return {
