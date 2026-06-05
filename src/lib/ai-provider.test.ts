@@ -288,6 +288,47 @@ describe("convertNovelWithProvider", () => {
     expect(validateScriptYaml(result.yaml).ok).toBe(true);
   });
 
+  it("asks Responses models for JSON rather than YAML", async () => {
+    const aiYaml = convertNovelToScript({ title: "雨夜来信", text }).yaml;
+    const parsed = validateScriptYaml(aiYaml);
+    if (!parsed.ok) {
+      throw new Error("test fixture must be valid");
+    }
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          output: [
+            {
+              type: "message",
+              content: [{ type: "output_text", text: JSON.stringify(parsed.document) }]
+            }
+          ]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    await convertNovelWithProvider(
+      { title: "雨夜来信", text },
+      {
+        AI_PROVIDER: "openai-compatible",
+        OPENAI_COMPATIBLE_GENERATION_API: "responses",
+        OPENAI_COMPATIBLE_API_KEY: "test-key"
+      },
+      fetchImpl
+    );
+
+    const requestBody = JSON.parse(String(fetchImpl.mock.calls[0][1]?.body)) as {
+      input: string;
+      instructions: string;
+    };
+
+    expect(requestBody.instructions).toContain("JSON Schema");
+    expect(requestBody.input).toContain("输出 JSON");
+    expect(requestBody.input).not.toContain("输出 YAML");
+    expect(requestBody.input).not.toContain("```");
+  });
+
   it("reports a clear Responses refusal", async () => {
     const fetchImpl = vi.fn(async () =>
       new Response(

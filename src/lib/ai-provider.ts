@@ -134,6 +134,39 @@ summary:
 ${input.text}`;
 }
 
+function buildJsonPrompt(input: NovelConversionInput): string {
+  const chapters = parseNovelChapters(input.text);
+  requireMinimumChapters(chapters, 3);
+
+  return `你是小说改编剧本助手。请把下面小说改编成严格 JSON 剧本文档；只输出 JSON，不要解释文字。
+
+硬性要求：
+- 顶层只能包含 metadata、characters、scenes、summary
+- metadata 必须包含 title、source_chapters、language、format_version
+- metadata.title 必须是 "${input.title}"
+- metadata.source_chapters 必须是 ${chapters.length}
+- metadata.language 必须是 "zh-CN"
+- metadata.format_version 必须是 "1.0"
+- characters 必须是数组，每个角色必须包含 id、name、role、traits
+- characters[*].id 使用 char_001、char_002 这种稳定 ID
+- characters[*].role 只能是 protagonist、antagonist、supporting、narrator、other
+- characters[*].traits 必须是字符串数组，至少 1 项
+- 每个 scene 必须包含 id、chapter、heading、location、time、characters、action、dialogue、camera_notes
+- scenes[*].id 使用 scene_001、scene_002 这种稳定 ID
+- scenes[*].characters 必须引用 characters[*].id，不要直接写角色名
+- dialogue 至少一条，每条包含 character、line、emotion
+- dialogue[*].character 必须引用 characters[*].id
+- summary 必须是对象，必须包含 logline、themes、adaptation_notes
+- summary.themes 必须是字符串数组
+- summary.adaptation_notes 必须是字符串数组
+- 禁止把 summary 输出成字符串
+- 不知道的内容也要根据小说合理改编，但不能省略必填字段
+- 所有必填字段都必须输出；不要省略 language、format_version、id、traits、summary
+
+小说：
+${input.text}`;
+}
+
 async function readOpenAICompatiblePayload(response: Response): Promise<{
   choices?: Array<{ message?: { content?: string } }>;
 }> {
@@ -292,7 +325,7 @@ async function convertWithOpenAIResponses(
       store: false,
       temperature,
       instructions: "你是小说改编剧本助手。只返回符合 JSON Schema 的剧本文档，不要解释。",
-      input: buildPrompt(input),
+      input: buildJsonPrompt(input),
       text: {
         format: {
           type: "json_schema",
