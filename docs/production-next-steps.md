@@ -101,6 +101,10 @@ npm run build
 
 目标：提高真实模型输出稳定性。
 
+设计文档：`docs/superpowers/specs/2026-06-05-responses-structured-output-design.md`
+
+实施计划：`docs/superpowers/plans/2026-06-05-responses-structured-output.md`
+
 当前实现让 AI 直接输出 YAML。上线版更稳的方式是：
 
 ```text

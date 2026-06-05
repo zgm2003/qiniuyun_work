@@ -75,6 +75,8 @@ Schema 校验 + 剧本质量清单
 
 上线版下一步顺序和新窗口接力上下文见 `docs/production-next-steps.md`。
 
+P2 Responses API 与结构化输出设计见 `docs/superpowers/specs/2026-06-05-responses-structured-output-design.md`，实施计划见 `docs/superpowers/plans/2026-06-05-responses-structured-output.md`。
+
 产品化阶段的架构边界见 `docs/product-architecture.md`，后续 UI 改造需遵守 `docs/style-guideline.md`。
 
 ## 依赖
