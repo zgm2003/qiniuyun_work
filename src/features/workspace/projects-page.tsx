@@ -38,7 +38,24 @@ export function ProjectsPage() {
   }
 
   useEffect(() => {
-    void refreshProjects();
+    let ignore = false;
+    listServerProjects()
+      .then((nextProjects) => {
+        if (!ignore) {
+          setProjects(nextProjects);
+          setMessage(nextProjects.length > 0 ? "" : "还没有服务端项目。可以先保存当前工作区。");
+        }
+      })
+      .catch((projectError) => {
+        if (!ignore) {
+          setProjects([]);
+          setMessage(projectError instanceof Error ? projectError.message : "读取项目失败");
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   return (
