@@ -5,12 +5,10 @@ import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { fetchCurrentUser, logout, type UserSummary } from "@/features/auth/auth-client";
 import { getActiveWorkbenchRoute, WORKBENCH_NAV_ITEMS } from "./workbench-nav";
-import { useWorkspace } from "./workspace-context";
 
 export function WorkbenchShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const activeRoute = getActiveWorkbenchRoute(pathname);
-  const { model } = useWorkspace();
   const [user, setUser] = useState<UserSummary | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -58,16 +56,24 @@ export function WorkbenchShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          <div className="nav-account">
-            <span className="nav-status">{user ? user.email : model}</span>
+          <div className={user ? "nav-account signed-in" : "nav-account guest"}>
             {user ? (
-              <button className="ghost-button nav-auth-button" type="button" disabled={isPending} onClick={handleLogout}>
-                退出
-              </button>
+              <>
+                <span className="nav-status" title={user.email}>
+                  {user.email}
+                </span>
+                <button className="ghost-button nav-auth-button" type="button" disabled={isPending} onClick={handleLogout}>
+                  退出
+                </button>
+              </>
             ) : (
               <span className="nav-auth-links">
-                <Link href="/login">登录</Link>
-                <Link href="/register">注册</Link>
+                <Link className="login-link" href="/login">
+                  登录
+                </Link>
+                <Link className="register-link" href="/register">
+                  注册
+                </Link>
               </span>
             )}
           </div>

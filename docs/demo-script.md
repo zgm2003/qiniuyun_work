@@ -7,7 +7,7 @@ npm install
 npm run dev
 ```
 
-打开 `http://localhost:3000`。
+打开 `http://localhost:3001`。
 
 ## 演示主线
 

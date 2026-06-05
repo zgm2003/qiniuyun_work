@@ -148,35 +148,73 @@ a {
 
 .nav-status {
   display: inline-flex;
-  min-width: 166px;
-  justify-content: center;
+  max-width: 220px;
+  justify-content: flex-start;
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 7px 11px;
+  padding: 7px 12px;
   color: var(--muted-strong);
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .nav-account {
   display: inline-flex;
-  min-width: 250px;
+  min-width: 190px;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
+}
+
+.nav-account.guest {
+  min-width: 128px;
 }
 
 .nav-auth-links {
   display: inline-flex;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
 }
 
 .nav-auth-links a,
 .nav-auth-button {
   min-height: 32px;
   border-radius: 999px;
-  padding: 0 10px;
+  padding: 0 13px;
   font-size: 12px;
+  font-weight: 750;
+}
+
+.nav-auth-links a {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid transparent;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.nav-auth-links a:hover {
+  transform: translateY(-1px);
+}
+
+.nav-auth-links .login-link {
+  color: var(--muted-strong);
+}
+
+.nav-auth-links .login-link:hover {
+  color: var(--foreground);
+}
+
+.nav-auth-links .register-link {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 10px 24px rgba(23, 23, 23, 0.14);
+}
+
+.nav-auth-links .register-link:hover {
+  background: #000000;
 }
 
 .app-shell {

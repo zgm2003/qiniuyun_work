@@ -108,7 +108,7 @@ npm run dev
 浏览器打开：
 
 ```text
-http://localhost:3000
+http://localhost:3001
 ```
 
 ## 测试与构建
