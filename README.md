@@ -16,6 +16,7 @@
 - 真实 AI 接口：生产默认调用 OpenAI 兼容 Responses API + Structured Outputs，开发可临时回退 Chat Completions。
 - 模型配置面板：开发/本地调试时可为单次转换配置 base URL、model、temperature 和一次性 API Key；生产环境使用服务端配置。
 - 本地项目草稿：可在浏览器 localStorage 保存、加载、删除当前小说/YAML/转换报告。
+- MySQL 基础持久化：提供项目、剧本版本和生成记录的服务端保存 API，localStorage 草稿仍保留。
 - YAML Schema：使用 Zod 定义运行时 Schema，并提供设计说明文档。
 - YAML 编辑与校验：页面内编辑 YAML，实时显示 Schema 校验结果。
 - 剧本质量清单：把 Schema 与结构检查转成可读 checklist，提示哪些交付项已通过。
@@ -87,6 +88,7 @@ P2 Responses API 与结构化输出设计见 `docs/superpowers/specs/2026-06-05-
 - React
 - yaml
 - zod
+- mysql2
 
 开发依赖：
 
@@ -133,6 +135,23 @@ OPENAI_COMPATIBLE_API_KEY=your_api_key
 生产默认使用 Responses API + Structured Outputs。模型先返回严格 JSON 剧本文档，服务端再转换为 YAML 给用户编辑和导出。开发排查时可以设置 `OPENAI_COMPATIBLE_GENERATION_API=chat-completions` 临时回到旧路径；生产目标是 `responses`。
 
 开发环境下，页面上的“模型配置”面板可以为单次转换覆盖 base URL、model、temperature 和一次性 API Key。生产环境应使用服务端配置，不接受浏览器传入 API Key、Base URL 或 model 覆盖。API Key 不写入仓库，也不进入 localStorage 草稿。
+
+## MySQL 持久化配置
+
+P3 已加入 MySQL 基础持久化，但不会替换现有 localStorage 草稿流程。服务端 API 可保存：
+
+- `POST /api/projects`：保存项目标题和小说原文。
+- `POST /api/projects/[projectId]/versions`：保存通过 Schema 校验的 YAML 剧本版本；版本插入和项目状态更新在一个事务里完成。
+- `POST /api/projects/[projectId]/generation-runs`：保存一次生成运行记录。
+
+初始化 SQL 在 `src/lib/db/schema.sql`。生产建议单独创建本项目数据库和最小权限用户，不要复用其他项目 root DSN。
+
+```env
+MYSQL_DSN=mysql://app_user:app_password@127.0.0.1:3306/qiniuyun
+MYSQL_CONNECTION_LIMIT=10
+```
+
+Redis、登录、RBAC 和 AI 供应商配置入库仍是后续阶段。
 
 ## 本地文本导入
 

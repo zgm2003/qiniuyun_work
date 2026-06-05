@@ -64,12 +64,12 @@ describe("parseMysqlDsn", () => {
   });
 
   it("parses Go tcp DSN used by the docker env", () => {
-    expect(parseMysqlDsn("root:admin_go_local@tcp(host.docker.internal:3307)/admin?charset=utf8mb4&parseTime=True&loc=Local")).toMatchObject({
+    expect(parseMysqlDsn("app_user:example_password@tcp(host.docker.internal:3307)/qiniuyun?charset=utf8mb4&parseTime=True&loc=Local")).toMatchObject({
       host: "host.docker.internal",
       port: 3307,
-      user: "root",
-      password: "admin_go_local",
-      database: "admin"
+      user: "app_user",
+      password: "example_password",
+      database: "qiniuyun"
     });
   });
 
@@ -275,8 +275,10 @@ Tests must prove:
 3. Creating a script version rejects invalid YAML before insert.
 4. Creating a script version inserts version and updates project status to `generated`.
 5. Recording a generation run inserts provider/model/status/error.
+6. Blank source text is rejected before insert.
+7. Script version insert and project status update run in one transaction.
 
-Use a fake query runner that records SQL and values.
+Use fake query runners that record SQL, values, and transaction calls.
 
 - [ ] **Step 2: Run RED**
 
@@ -431,7 +433,53 @@ git commit -m "feat: add script version api"
 
 ---
 
-### Task 6: Update docs and env
+### Task 6: Add generation run API
+
+**Files:**
+- Create: `src/app/api/projects/[projectId]/generation-runs/route.ts`
+- Create: `src/app/api/projects/[projectId]/generation-runs/route.test.ts`
+
+- [ ] **Step 1: Write failing API tests**
+
+Tests must cover:
+
+1. valid generation run returns 201 and run JSON.
+2. invalid JSON returns 400 `请求体必须是 JSON`.
+3. blank model returns 400 `model 不能为空`.
+4. service failure returns 500 `生成记录保存失败`.
+
+Mock `@/lib/server/projects`.
+
+- [ ] **Step 2: Run RED**
+
+```bash
+npm test -- src/app/api/projects/[projectId]/generation-runs/route.test.ts
+```
+
+Expected: fail because route file is missing.
+
+- [ ] **Step 3: Implement route**
+
+Call `recordGenerationRun`. Do not connect it to `/api/convert` in this task; this API is the P3 persistence boundary for generation run rows.
+
+- [ ] **Step 4: Run GREEN**
+
+```bash
+npm test -- src/app/api/projects/[projectId]/generation-runs/route.test.ts
+```
+
+Expected: pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/app/api/projects/[projectId]/generation-runs/route.ts src/app/api/projects/[projectId]/generation-runs/route.test.ts
+git commit -m "feat: add generation run api"
+```
+
+---
+
+### Task 7: Update docs and env
 
 **Files:**
 - Modify: `.env.example`
@@ -474,7 +522,7 @@ git commit -m "docs: document mysql persistence foundation"
 
 ---
 
-### Task 7: Final verification and review
+### Task 8: Final verification and review
 
 **Files:**
 - No new files unless fixing review findings.
@@ -482,7 +530,7 @@ git commit -m "docs: document mysql persistence foundation"
 - [ ] **Step 1: Run targeted tests**
 
 ```bash
-npm test -- src/lib/db/mysql.test.ts src/lib/db/schema.test.ts src/lib/server/projects.test.ts src/app/api/projects/route.test.ts src/app/api/projects/[projectId]/versions/route.test.ts
+npm test -- src/lib/db/mysql.test.ts src/lib/db/schema.test.ts src/lib/server/projects.test.ts src/app/api/projects/route.test.ts src/app/api/projects/[projectId]/versions/route.test.ts src/app/api/projects/[projectId]/generation-runs/route.test.ts
 ```
 
 Expected: all pass.
@@ -503,6 +551,9 @@ Confirm:
 
 - No Redis code added.
 - No Auth/RBAC code added.
+- Script version insert and project status update use one transaction.
+- `sourceText` blank input is tested and rejected.
+- `generation_runs` has a real API boundary, while `/api/convert` remains unchanged.
 - `/api/convert` response unchanged.
 - localStorage draft functions unchanged.
 - No real database password committed beyond example placeholders.

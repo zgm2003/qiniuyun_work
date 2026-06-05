@@ -124,9 +124,29 @@ CREATE TABLE generation_runs (
 
 - 先用现有 `validateScriptYaml` 校验 YAML。
 - 校验失败返回 400，不入库。
-- 校验通过则保存版本，并把项目状态更新为 `generated`。
+- 校验通过则在同一个事务里保存版本，并把项目状态更新为 `generated`。插入版本成功但状态更新失败时必须回滚。
 - `report_json` 保存转换报告。
 - `validation_json` 保存校验结果。只保存当前结构，不发明默认值。
+
+
+### `POST /api/projects/[projectId]/generation-runs`
+
+输入：
+
+```json
+{
+  "provider": "openai-compatible",
+  "model": "gpt-5.5",
+  "status": "succeeded",
+  "errorMessage": null
+}
+```
+
+行为：
+
+- 记录一次生成运行的供应商、模型、状态和错误。
+- `model` 不能为空。
+- 本接口提供生成记录的真实入库边界，但本 P3 不自动接入 `/api/convert`，避免破坏当前转换返回结构和前端流程。后续异步任务或登录态接入时，再把转换请求和项目 ID 绑定。
 
 ## 错误处理
 
@@ -146,7 +166,7 @@ MYSQL_DSN=mysql://app_user:app_password@127.0.0.1:3306/qiniuyun
 MYSQL_CONNECTION_LIMIT=10
 ```
 
-也兼容用户现有 `MYSQL_DSN=root:admin_go_local@tcp(host.docker.internal:3307)/admin?...` 这种 Go 风格 DSN，转换为 `mysql2` 可用配置。
+也兼容 Go 风格 DSN，例如 `app_user:example_password@tcp(host.docker.internal:3307)/qiniuyun?...`，转换为 `mysql2` 可用配置。这里使用示例口令，不复制其他项目的真实 DSN。
 
 ## 测试策略
 

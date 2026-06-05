@@ -56,6 +56,7 @@ npm run build
 | --- | --- | --- | --- |
 | P1 | docs | product architecture and style guideline | 明确产品化架构边界和后续 UI 改动规则。 |
 | P2 | refactor/style | routed workspace shell | 将拥挤单页拆成 `/workspace`、`/script`、`/drafts`、`/report`，并调整为中性 SaaS / 管理台风格。 |
+| P3 | feat | database foundation | 接入 MySQL 基础持久化，保存项目、剧本版本和生成记录；localStorage 草稿保留，Redis/Auth/RBAC 后置。 |
 
 ## 当前最终演示链路
 
