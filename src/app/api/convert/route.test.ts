@@ -92,6 +92,100 @@ describe("POST /api/convert", () => {
     }
   });
 
+  it("ignores browser API key, base URL, and model overrides in production", async () => {
+    const originalFetch = globalThis.fetch;
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalProvider = process.env.AI_PROVIDER;
+    const originalApiKey = process.env.OPENAI_COMPATIBLE_API_KEY;
+    const originalBaseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL;
+    const originalModel = process.env.OPENAI_COMPATIBLE_MODEL;
+    const aiYaml = convertNovelToScript({ title: "雨夜来信", text: validText }).yaml;
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: aiYaml } }]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    vi.stubEnv("NODE_ENV", "production");
+    process.env.AI_PROVIDER = "openai-compatible";
+    process.env.OPENAI_COMPATIBLE_API_KEY = "env-key";
+    process.env.OPENAI_COMPATIBLE_BASE_URL = "https://env.example.test/v1";
+    process.env.OPENAI_COMPATIBLE_MODEL = "env-model";
+    globalThis.fetch = fetchMock;
+
+    try {
+      const response = await POST(
+        jsonRequest({
+          title: "雨夜来信",
+          text: validText,
+          modelConfig: {
+            provider: "openai-compatible",
+            apiKey: "request-key",
+            baseUrl: "https://request.example.test/v1",
+            model: "request-model",
+            temperature: 0.4
+          }
+        })
+      );
+      const body = await response.json();
+      const requestBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as {
+        model: string;
+        temperature: number;
+      };
+
+      expect(response.status).toBe(200);
+      expect(body.report.provider).toBe("openai-compatible");
+      expect(fetchMock.mock.calls[0][0]).toBe("https://env.example.test/v1/chat/completions");
+      expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+        authorization: "Bearer env-key"
+      });
+      expect(requestBody).toMatchObject({
+        model: "env-model",
+        temperature: 0.4
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+      vi.stubEnv("NODE_ENV", originalNodeEnv);
+      process.env.AI_PROVIDER = originalProvider;
+      process.env.OPENAI_COMPATIBLE_API_KEY = originalApiKey;
+      process.env.OPENAI_COMPATIBLE_BASE_URL = originalBaseUrl;
+      process.env.OPENAI_COMPATIBLE_MODEL = originalModel;
+    }
+  });
+
+  it("rejects request-level mock provider in production", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalProvider = process.env.AI_PROVIDER;
+    const originalApiKey = process.env.OPENAI_COMPATIBLE_API_KEY;
+
+    vi.stubEnv("NODE_ENV", "production");
+    process.env.AI_PROVIDER = "openai-compatible";
+    process.env.OPENAI_COMPATIBLE_API_KEY = "env-key";
+
+    try {
+      const response = await POST(
+        jsonRequest({
+          title: "雨夜来信",
+          text: validText,
+          modelConfig: {
+            provider: "mock"
+          }
+        })
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(body.error).toBe("生产环境不允许使用 mock provider");
+    } finally {
+      vi.stubEnv("NODE_ENV", originalNodeEnv);
+      process.env.AI_PROVIDER = originalProvider;
+      process.env.OPENAI_COMPATIBLE_API_KEY = originalApiKey;
+    }
+  });
+
   it("returns 400 for invalid model config", async () => {
     const response = await POST(
       jsonRequest({

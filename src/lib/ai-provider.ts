@@ -24,7 +24,7 @@ export type RequestModelConfig = {
   temperature?: number;
 };
 
-const DEFAULT_MODEL = "gpt-4.1-mini";
+const DEFAULT_MODEL = "gpt-5.5";
 
 function stripYamlFence(content: string): string {
   const trimmed = content.trim();
@@ -159,6 +159,7 @@ async function convertWithOpenAICompatible(
     },
     body: JSON.stringify({
       model,
+      store: false,
       temperature,
       messages: [
         {
@@ -201,9 +202,15 @@ export async function convertNovelWithProvider(
   fetchImpl: FetchImplementation = fetch,
   modelConfig?: RequestModelConfig
 ): Promise<NovelConversionResult> {
-  const provider = modelConfig?.provider ?? env.AI_PROVIDER ?? "mock";
+  const isProduction = env.NODE_ENV === "production";
+  const defaultProvider = isProduction ? "openai-compatible" : "mock";
+  const provider = modelConfig?.provider ?? env.AI_PROVIDER ?? defaultProvider;
 
   if (provider === "mock") {
+    if (isProduction) {
+      throw new Error("生产环境不允许使用 mock provider");
+    }
+
     return convertNovelToScript(input);
   }
 

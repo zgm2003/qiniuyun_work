@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { convertNovelWithProvider } from "@/lib/ai-provider";
+import { convertNovelWithProvider, type RequestModelConfig } from "@/lib/ai-provider";
 
 const ModelConfigSchema = z.object({
   provider: z.enum(["mock", "openai-compatible"]),
@@ -20,6 +20,25 @@ const ConvertRequestSchema = z.object({
   modelConfig: ModelConfigSchema.optional()
 });
 
+function sanitizeModelConfigForRuntime(modelConfig: RequestModelConfig | undefined): RequestModelConfig | undefined {
+  if (process.env.NODE_ENV !== "production") {
+    return modelConfig;
+  }
+
+  if (!modelConfig) {
+    return undefined;
+  }
+
+  if (modelConfig.provider === "mock") {
+    return { provider: "mock" };
+  }
+
+  return {
+    provider: "openai-compatible",
+    temperature: modelConfig.temperature
+  };
+}
+
 export async function POST(request: Request) {
   let payload: unknown;
 
@@ -36,7 +55,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await convertNovelWithProvider(parsed.data, process.env, fetch, parsed.data.modelConfig);
+    const result = await convertNovelWithProvider(
+      parsed.data,
+      process.env,
+      fetch,
+      sanitizeModelConfigForRuntime(parsed.data.modelConfig)
+    );
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "转换失败";

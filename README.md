@@ -14,7 +14,7 @@
 - 输入校验：少于 3 个章节直接报错，不生成假结果。
 - 剧本生成：产品界面默认使用 OpenAI-compatible 真实 AI provider。
 - 真实 AI 接口：调用 OpenAI 兼容 Chat Completions API。
-- 模型配置面板：页面可为单次转换配置 base URL、model、temperature 和一次性 API Key。
+- 模型配置面板：开发/本地调试时可为单次转换配置 base URL、model、temperature 和一次性 API Key；生产环境使用服务端配置。
 - 本地项目草稿：可在浏览器 localStorage 保存、加载、删除当前小说/YAML/转换报告。
 - YAML Schema：使用 Zod 定义运行时 Schema，并提供设计说明文档。
 - YAML 编辑与校验：页面内编辑 YAML，实时显示 Schema 校验结果。
@@ -44,6 +44,8 @@ Schema 校验 + 剧本质量清单
 
 录屏建议直接参考 `docs/final-demo-guide.md` 和 `docs/demo-script.md`。
 
+题目要求逐条验收见 `docs/requirement-checklist.md`。
+
 ## 原创功能范围
 
 本项目原创部分包括：
@@ -56,7 +58,7 @@ Schema 校验 + 剧本质量清单
 - 剧本结构质量清单，不做 AI 主观剧情评分。
 - 确定性剧本转换器，仅用于测试、CI 和样例输出。
 - OpenAI-compatible provider 编排。
-- 请求级模型配置，产品 UI 不暴露测试用 provider。
+- 开发/本地调试请求级模型配置；生产环境不接受浏览器覆盖 API Key、Base URL 或 model。
 - 浏览器本地草稿管理，不保存 API Key 和模型配置。
 - 转换 API。
 - 前端输入、转换、编辑、校验、导出闭环。
@@ -70,6 +72,8 @@ Schema 校验 + 剧本质量清单
 当前版本已经覆盖比赛演示闭环。后续增强方向包括局部重写、质量评分、登录系统、管理端、团队协作和异步任务队列。
 
 详细 TODO 见 `docs/future-roadmap.md`。
+
+上线版下一步顺序和新窗口接力上下文见 `docs/production-next-steps.md`。
 
 产品化阶段的架构边界见 `docs/product-architecture.md`，后续 UI 改造需遵守 `docs/style-guideline.md`。
 
@@ -112,18 +116,20 @@ npm run build
 
 ## AI Provider 配置
 
-产品默认调用 OpenAI 兼容接口：
+产品默认调用 OpenAI 兼容接口。上线环境必须由服务端持有 API Key，普通用户不填写、不查看真实 Key：
 
 ```env
 AI_PROVIDER=openai-compatible
-OPENAI_COMPATIBLE_API_KEY=your_api_key
 OPENAI_COMPATIBLE_BASE_URL=https://api.openai.com/v1
-OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
+OPENAI_COMPATIBLE_MODEL=gpt-5.5
+OPENAI_COMPATIBLE_API_KEY=your_api_key
 ```
 
-真实 AI 返回内容仍然必须通过本项目 YAML Schema 校验。校验失败会报错，不会静默兜底。Base URL 可以填写服务根地址或 `/v1` 地址，系统会在缺少 `/v1` 时自动补齐。
+真实 AI 返回内容仍然必须通过本项目 YAML Schema 校验。校验失败会报错，不会静默兜底。开发/本地调试的 Base URL 可以填写服务根地址或 `/v1` 地址，系统会在缺少 `/v1` 时自动补齐；生产 Base URL 由服务端 env 或后续数据库配置持有。
 
-页面上的“模型配置”面板可以覆盖 `.env` 中的 provider/base URL/model/temperature。API Key 只随本次 `/api/convert` 请求发送，不写入仓库，也不进入 localStorage 草稿。
+当前实现仍使用 OpenAI-compatible Chat Completions 调用；迁移到 Responses API 和 Structured Outputs 属于后续 P2，不和本次生产配置加固混在一起。
+
+开发环境下，页面上的“模型配置”面板可以为单次转换覆盖 base URL、model、temperature 和一次性 API Key。生产环境应使用服务端配置，不接受浏览器传入 API Key、Base URL 或 model 覆盖。API Key 不写入仓库，也不进入 localStorage 草稿。
 
 ## 本地文本导入
 
@@ -150,7 +156,7 @@ OPENAI_COMPATIBLE_MODEL=gpt-4.1-mini
 2. 打开首页。
 3. 点击“导入文本”，选择 `samples/novel-3chapters.txt`；也可点击“加载样例”快速恢复。
 4. 确认标题由文件名生成，且“章节大纲预览”显示 3 章、每章标题、字数和正文预览。
-5. 展示“模型配置”面板：填写 OpenAI-compatible base URL、model、temperature 和一次性 API Key。
+5. 本地开发录屏时展示“模型配置”面板：填写 OpenAI-compatible base URL、model、temperature 和一次性 API Key；生产录屏不展示/不填写这些敏感字段。
 6. 点击“转换为 YAML 剧本”。
 7. 展示生成的 YAML、Schema 校验和“剧本质量清单”全部通过。
 8. 展示角色、场景、台词统计。

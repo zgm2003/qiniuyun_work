@@ -63,12 +63,12 @@ samples/novel-3chapters.txt
 
 展示“模型配置”区域：
 
-- 可以填写 base URL、model、temperature、一次性 API Key。
+- 本地开发录屏可以填写 base URL、model、temperature、一次性 API Key；生产录屏使用服务端 AI 配置，不展示也不填写浏览器侧 API Key/Base URL/model。
 - Provider 面向 OpenAI-compatible，不暴露测试用 provider。
 
 强调：
 
-- API Key 只随本次请求发送。
+- 本地开发调试 API Key 只随本次请求发送；生产环境由服务端持有 API Key。
 - 不写入仓库。
 - 不保存到 localStorage 草稿。
 
@@ -145,8 +145,8 @@ docs/script-yaml-schema.md
 
 真实 API 演示建议：
 
-1. 提前准备可用的 OpenAI-compatible base URL、model 和 API Key。
-2. 录屏时不要展示完整 API Key。
+1. 本地开发录屏提前准备可用的 OpenAI-compatible base URL、model 和 API Key；生产录屏提前在服务端环境变量配置。
+2. 录屏时不要展示完整 API Key，生产环境不要在浏览器填写 API Key。
 3. 如果真实模型输出未通过 Schema，直接说明：系统会拒绝坏 YAML，而不是悄悄兜底。
 4. 如需稳定演示结构，可展示 `samples/output.yaml` 或测试结果，但不要把测试用 provider 当成产品能力。
 
