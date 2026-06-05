@@ -261,6 +261,95 @@ describe("convertNovelWithProvider", () => {
     expect(validateScriptYaml(result.yaml).ok).toBe(true);
   });
 
+  it("reports a clear Responses refusal", async () => {
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          output: [
+            {
+              type: "message",
+              content: [{ type: "refusal", refusal: "无法处理该请求" }]
+            }
+          ]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    await expect(
+      convertNovelWithProvider(
+        { title: "雨夜来信", text },
+        {
+          AI_PROVIDER: "openai-compatible",
+          OPENAI_COMPATIBLE_GENERATION_API: "responses",
+          OPENAI_COMPATIBLE_API_KEY: "test-key"
+        },
+        fetchImpl
+      )
+    ).rejects.toThrow("AI 拒绝生成剧本：无法处理该请求");
+  });
+
+  it("reports invalid Responses JSON text", async () => {
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          output: [
+            {
+              type: "message",
+              content: [{ type: "output_text", text: "not json" }]
+            }
+          ]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    await expect(
+      convertNovelWithProvider(
+        { title: "雨夜来信", text },
+        {
+          AI_PROVIDER: "openai-compatible",
+          OPENAI_COMPATIBLE_GENERATION_API: "responses",
+          OPENAI_COMPATIBLE_API_KEY: "test-key"
+        },
+        fetchImpl
+      )
+    ).rejects.toThrow("AI 服务返回了无法解析的 JSON");
+  });
+
+  it("reports invalid Responses script document structure", async () => {
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          output: [
+            {
+              type: "message",
+              content: [
+                {
+                  type: "output_text",
+                  text: JSON.stringify({ summary: "bad" })
+                }
+              ]
+            }
+          ]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    await expect(
+      convertNovelWithProvider(
+        { title: "雨夜来信", text },
+        {
+          AI_PROVIDER: "openai-compatible",
+          OPENAI_COMPATIBLE_GENERATION_API: "responses",
+          OPENAI_COMPATIBLE_API_KEY: "test-key"
+        },
+        fetchImpl
+      )
+    ).rejects.toThrow("AI 返回的剧本文档未通过 Schema 校验");
+  });
+
   it("normalizes provider base URL by appending /v1 when it is missing", async () => {
     const aiYaml = convertNovelToScript({ title: "雨夜来信", text }).yaml;
     const fetchImpl = vi.fn(async () =>
