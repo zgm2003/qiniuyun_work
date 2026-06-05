@@ -19,13 +19,13 @@ describe("parseMysqlDsn", () => {
     });
   });
 
-  it("parses Go tcp DSN used by the docker env", () => {
-    expect(parseMysqlDsn("root:admin_go_local@tcp(host.docker.internal:3307)/admin?charset=utf8mb4&parseTime=True&loc=Local")).toMatchObject({
+  it("parses Go tcp DSN examples", () => {
+    expect(parseMysqlDsn("app_user:example_password@tcp(host.docker.internal:3307)/qiniuyun?charset=utf8mb4&parseTime=True&loc=Local")).toMatchObject({
       host: "host.docker.internal",
       port: 3307,
-      user: "root",
-      password: "admin_go_local",
-      database: "admin"
+      user: "app_user",
+      password: "example_password",
+      database: "qiniuyun"
     });
   });
 

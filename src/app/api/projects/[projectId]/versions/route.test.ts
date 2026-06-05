@@ -73,6 +73,16 @@ describe("POST /api/projects/[projectId]/versions", () => {
     expect(createScriptVersionMock).not.toHaveBeenCalled();
   });
 
+
+  it("returns 400 for blank project ids", async () => {
+    const response = await POST(jsonRequest({ yaml: generated.yaml, report: generated.report }), context("   "));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("projectId 不能为空");
+    expect(createScriptVersionMock).not.toHaveBeenCalled();
+  });
+
   it("returns 400 for invalid YAML", async () => {
     createScriptVersionMock.mockRejectedValue(new Error("YAML 未通过 Schema 校验：metadata.title: Invalid input"));
 

@@ -136,7 +136,7 @@ export async function createScriptVersion(
     await connection.beginTransaction();
     await connection.query<ResultSetHeader>(
       `INSERT INTO script_versions (id, project_id, yaml, report_json, validation_json, created_at)
-       VALUES (?, ?, ?, CAST(? AS JSON), CAST(? AS JSON), ?)`,
+       VALUES (?, ?, ?, ?, ?, ?)`,
       [id, projectId, yaml, JSON.stringify(input.report), JSON.stringify(validation), createdAtDate]
     );
     await connection.query<ResultSetHeader>(

@@ -74,6 +74,23 @@ describe("POST /api/projects/[projectId]/generation-runs", () => {
     expect(recordGenerationRunMock).not.toHaveBeenCalled();
   });
 
+
+  it("returns 400 for blank project ids", async () => {
+    const response = await POST(
+      jsonRequest({
+        provider: "openai-compatible",
+        model: "gpt-5.5",
+        status: "succeeded"
+      }),
+      context("   ")
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("projectId 不能为空");
+    expect(recordGenerationRunMock).not.toHaveBeenCalled();
+  });
+
   it("returns 400 for blank model", async () => {
     const response = await POST(
       jsonRequest({

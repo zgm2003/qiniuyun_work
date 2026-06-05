@@ -22,7 +22,12 @@ type RouteContext = {
 
 async function readProjectId(context: RouteContext): Promise<string> {
   const params = await context.params;
-  return params.projectId;
+  const projectId = params.projectId.trim();
+  if (!projectId) {
+    throw new Error("projectId 不能为空");
+  }
+
+  return projectId;
 }
 
 export async function POST(request: Request, context: RouteContext) {
@@ -49,6 +54,10 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ version }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "剧本版本保存失败";
+    if (message === "projectId 不能为空") {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
     if (message.startsWith("YAML 未通过 Schema 校验")) {
       return NextResponse.json({ error: message }, { status: 400 });
     }

@@ -63,7 +63,7 @@ describe("parseMysqlDsn", () => {
     });
   });
 
-  it("parses Go tcp DSN used by the docker env", () => {
+  it("parses Go tcp DSN examples", () => {
     expect(parseMysqlDsn("app_user:example_password@tcp(host.docker.internal:3307)/qiniuyun?charset=utf8mb4&parseTime=True&loc=Local")).toMatchObject({
       host: "host.docker.internal",
       port: 3307,
@@ -562,3 +562,4 @@ Confirm:
 - [ ] **Step 4: Commit any final fixes**
 
 Only if review finds issues.
+

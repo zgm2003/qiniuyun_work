@@ -143,6 +143,7 @@ describe("project persistence service", () => {
     const updateCall = runner.calls.find((call) => call.sql.includes("UPDATE projects"));
     expect(insertCall).toBeDefined();
     expect(updateCall).toBeDefined();
+    expect(insertCall?.sql).not.toContain("CAST(? AS JSON)");
     expect(JSON.parse(String(insertCall?.values?.[3]))).toEqual(generated.report);
     expect(JSON.parse(String(insertCall?.values?.[4]))).toMatchObject({ ok: true });
     expect(updateCall?.values?.[0]).toBe("generated");

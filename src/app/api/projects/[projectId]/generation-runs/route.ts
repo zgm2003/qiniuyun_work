@@ -15,7 +15,12 @@ type RouteContext = {
 
 async function readProjectId(context: RouteContext): Promise<string> {
   const params = await context.params;
-  return params.projectId;
+  const projectId = params.projectId.trim();
+  if (!projectId) {
+    throw new Error("projectId 不能为空");
+  }
+
+  return projectId;
 }
 
 export async function POST(request: Request, context: RouteContext) {
@@ -42,7 +47,12 @@ export async function POST(request: Request, context: RouteContext) {
       errorMessage: parsed.data.errorMessage ?? null
     });
     return NextResponse.json({ run }, { status: 201 });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "生成记录保存失败";
+    if (message === "projectId 不能为空") {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
     return NextResponse.json({ error: "生成记录保存失败" }, { status: 500 });
   }
 }
