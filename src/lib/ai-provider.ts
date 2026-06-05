@@ -3,8 +3,11 @@ import { DEFAULT_OPENAI_BASE_URL, normalizeOpenAIBaseUrl } from "./openai-compat
 import {
   validateScriptYaml,
   type ScriptDocument,
-  type ScriptValidationError
+  type ScriptValidationError,
+  parseScriptDocumentJson,
+  SCRIPT_DOCUMENT_JSON_SCHEMA
 } from "./script-schema";
+import { scriptDocumentToValidatedYaml } from "./script-yaml";
 import {
   convertNovelToScript,
   type ConversionReport,
@@ -25,6 +28,7 @@ export type RequestModelConfig = {
 };
 
 const DEFAULT_MODEL = "gpt-5.5";
+type OpenAICompatibleGenerationApi = "chat-completions" | "responses";
 
 function stripYamlFence(content: string): string {
   const trimmed = content.trim();
@@ -38,6 +42,19 @@ function joinValidationErrors(errors: ScriptValidationError[]): string {
 
 function countDialogue(document: ScriptDocument): number {
   return document.scenes.reduce((count, scene) => count + scene.dialogue.length, 0);
+}
+
+function resolveGenerationApi(env: ProviderEnvironment): OpenAICompatibleGenerationApi {
+  const configured = env.OPENAI_COMPATIBLE_GENERATION_API;
+  if (!configured) {
+    return env.NODE_ENV === "production" ? "responses" : "chat-completions";
+  }
+
+  if (configured === "chat-completions" || configured === "responses") {
+    return configured;
+  }
+
+  throw new Error(`不支持的 OPENAI_COMPATIBLE_GENERATION_API：${configured}`);
 }
 
 function buildReport(provider: ConversionReport["provider"], document: ScriptDocument): ConversionReport {
@@ -117,6 +134,39 @@ summary:
 ${input.text}`;
 }
 
+function buildJsonPrompt(input: NovelConversionInput): string {
+  const chapters = parseNovelChapters(input.text);
+  requireMinimumChapters(chapters, 3);
+
+  return `你是小说改编剧本助手。请把下面小说改编成严格 JSON 剧本文档；只输出 JSON，不要解释文字。
+
+硬性要求：
+- 顶层只能包含 metadata、characters、scenes、summary
+- metadata 必须包含 title、source_chapters、language、format_version
+- metadata.title 必须是 "${input.title}"
+- metadata.source_chapters 必须是 ${chapters.length}
+- metadata.language 必须是 "zh-CN"
+- metadata.format_version 必须是 "1.0"
+- characters 必须是数组，每个角色必须包含 id、name、role、traits
+- characters[*].id 使用 char_001、char_002 这种稳定 ID
+- characters[*].role 只能是 protagonist、antagonist、supporting、narrator、other
+- characters[*].traits 必须是字符串数组，至少 1 项
+- 每个 scene 必须包含 id、chapter、heading、location、time、characters、action、dialogue、camera_notes
+- scenes[*].id 使用 scene_001、scene_002 这种稳定 ID
+- scenes[*].characters 必须引用 characters[*].id，不要直接写角色名
+- dialogue 至少一条，每条包含 character、line、emotion
+- dialogue[*].character 必须引用 characters[*].id
+- summary 必须是对象，必须包含 logline、themes、adaptation_notes
+- summary.themes 必须是字符串数组
+- summary.adaptation_notes 必须是字符串数组
+- 禁止把 summary 输出成字符串
+- 不知道的内容也要根据小说合理改编，但不能省略必填字段
+- 所有必填字段都必须输出；不要省略 language、format_version、id、traits、summary
+
+小说：
+${input.text}`;
+}
+
 async function readOpenAICompatiblePayload(response: Response): Promise<{
   choices?: Array<{ message?: { content?: string } }>;
 }> {
@@ -135,6 +185,60 @@ async function readOpenAICompatiblePayload(response: Response): Promise<{
   } catch {
     throw new Error(`AI 服务返回了无法解析的 JSON。响应预览：${preview}`);
   }
+}
+
+type ResponsesPayload = {
+  output?: Array<{
+    type?: string;
+    content?: Array<{
+      type?: string;
+      text?: string;
+      refusal?: string;
+    }>;
+  }>;
+};
+
+async function readOpenAIResponsesPayload(response: Response): Promise<ResponsesPayload> {
+  const contentType = response.headers.get("content-type") ?? "";
+  const bodyText = await response.text();
+  const preview = bodyText.trim().replace(/\s+/g, " ").slice(0, 160);
+
+  if (contentType.toLowerCase().includes("text/html") || bodyText.trimStart().startsWith("<")) {
+    throw new Error(`AI 服务返回了 HTML 页面，不是 JSON。请检查 Base URL 是否应以 /v1 结尾。响应预览：${preview}`);
+  }
+
+  try {
+    return JSON.parse(bodyText) as ResponsesPayload;
+  } catch {
+    throw new Error(`AI 服务返回了无法解析的 JSON。响应预览：${preview}`);
+  }
+}
+
+function parseResponsesScriptDocument(payload: ResponsesPayload): ScriptDocument {
+  const content = payload.output?.flatMap((item) => (item.type === "message" ? item.content ?? [] : [])) ?? [];
+  const refusal = content.find((item) => item.type === "refusal")?.refusal;
+  if (refusal) {
+    throw new Error(`AI 拒绝生成剧本：${refusal}`);
+  }
+
+  const text = content.find((item) => item.type === "output_text")?.text;
+  if (!text) {
+    throw new Error("AI 服务没有返回结构化剧本内容");
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("AI 服务返回了无法解析的 JSON");
+  }
+
+  const validation = parseScriptDocumentJson(parsed);
+  if (!validation.ok) {
+    throw new Error(`AI 返回的剧本文档未通过 Schema 校验：${joinValidationErrors(validation.errors)}`);
+  }
+
+  return validation.document;
 }
 
 async function convertWithOpenAICompatible(
@@ -196,6 +300,57 @@ async function convertWithOpenAICompatible(
   };
 }
 
+async function convertWithOpenAIResponses(
+  input: NovelConversionInput,
+  env: ProviderEnvironment,
+  fetchImpl: FetchImplementation,
+  modelConfig?: RequestModelConfig
+): Promise<NovelConversionResult> {
+  const apiKey = modelConfig?.apiKey || env.OPENAI_COMPATIBLE_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_COMPATIBLE_API_KEY 未配置");
+  }
+
+  const baseUrl = normalizeOpenAIBaseUrl(modelConfig?.baseUrl ?? env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_OPENAI_BASE_URL);
+  const model = modelConfig?.model ?? env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_MODEL;
+  const temperature = modelConfig?.temperature ?? 0.2;
+  const response = await fetchImpl(`${baseUrl}/responses`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      store: false,
+      temperature,
+      instructions: "你是小说改编剧本助手。只返回符合 JSON Schema 的剧本文档，不要解释。",
+      input: buildJsonPrompt(input),
+      text: {
+        format: {
+          type: "json_schema",
+          name: "script_document",
+          strict: true,
+          schema: SCRIPT_DOCUMENT_JSON_SCHEMA
+        }
+      }
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`AI 服务请求失败：${response.status}`);
+  }
+
+  const payload = await readOpenAIResponsesPayload(response);
+  const document = parseResponsesScriptDocument(payload);
+  const yaml = scriptDocumentToValidatedYaml(document);
+
+  return {
+    yaml,
+    report: buildReport("openai-compatible", document)
+  };
+}
+
 export async function convertNovelWithProvider(
   input: NovelConversionInput,
   env: ProviderEnvironment = process.env,
@@ -215,6 +370,10 @@ export async function convertNovelWithProvider(
   }
 
   if (provider === "openai-compatible") {
+    if (resolveGenerationApi(env) === "responses") {
+      return convertWithOpenAIResponses(input, env, fetchImpl, modelConfig);
+    }
+
     return convertWithOpenAICompatible(input, env, fetchImpl, modelConfig);
   }
 
