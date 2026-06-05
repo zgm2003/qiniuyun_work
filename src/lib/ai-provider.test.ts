@@ -103,6 +103,33 @@ describe("convertNovelWithProvider", () => {
     });
   });
 
+  it("can still use Chat Completions when generation API is explicitly configured", async () => {
+    const aiYaml = convertNovelToScript({ title: "雨夜来信", text }).yaml;
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: aiYaml } }]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    const result = await convertNovelWithProvider(
+      { title: "雨夜来信", text },
+      {
+        AI_PROVIDER: "openai-compatible",
+        OPENAI_COMPATIBLE_GENERATION_API: "chat-completions",
+        OPENAI_COMPATIBLE_API_KEY: "test-key",
+        OPENAI_COMPATIBLE_BASE_URL: "https://llm.example.test/v1",
+        OPENAI_COMPATIBLE_MODEL: "demo-model"
+      },
+      fetchImpl
+    );
+
+    expect(result.report.provider).toBe("openai-compatible");
+    expect(fetchImpl.mock.calls[0][0]).toBe("https://llm.example.test/v1/chat/completions");
+  });
+
   it("lets request model config override env provider settings for one conversion", async () => {
     const aiYaml = convertNovelToScript({ title: "雨夜来信", text }).yaml;
     const fetchImpl = vi.fn(async () =>

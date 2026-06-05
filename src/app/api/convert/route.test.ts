@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { convertNovelToScript } from "@/lib/mock-converter";
+import { validateScriptYaml } from "@/lib/script-schema";
 
 const validText = `第1章 雨夜来信
 林夏在旧书店收到一封没有署名的信。
@@ -99,6 +100,7 @@ describe("POST /api/convert", () => {
     const originalApiKey = process.env.OPENAI_COMPATIBLE_API_KEY;
     const originalBaseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL;
     const originalModel = process.env.OPENAI_COMPATIBLE_MODEL;
+    const originalGenerationApi = process.env.OPENAI_COMPATIBLE_GENERATION_API;
     const aiYaml = convertNovelToScript({ title: "雨夜来信", text: validText }).yaml;
     const fetchMock = vi.fn(async () =>
       new Response(
@@ -114,6 +116,7 @@ describe("POST /api/convert", () => {
     process.env.OPENAI_COMPATIBLE_API_KEY = "env-key";
     process.env.OPENAI_COMPATIBLE_BASE_URL = "https://env.example.test/v1";
     process.env.OPENAI_COMPATIBLE_MODEL = "env-model";
+    process.env.OPENAI_COMPATIBLE_GENERATION_API = "chat-completions";
     globalThis.fetch = fetchMock;
 
     try {
@@ -153,6 +156,87 @@ describe("POST /api/convert", () => {
       process.env.OPENAI_COMPATIBLE_API_KEY = originalApiKey;
       process.env.OPENAI_COMPATIBLE_BASE_URL = originalBaseUrl;
       process.env.OPENAI_COMPATIBLE_MODEL = originalModel;
+      process.env.OPENAI_COMPATIBLE_GENERATION_API = originalGenerationApi;
+    }
+  });
+
+  it("keeps production request-level overrides sanitized in Responses mode", async () => {
+    const originalFetch = globalThis.fetch;
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalProvider = process.env.AI_PROVIDER;
+    const originalApiKey = process.env.OPENAI_COMPATIBLE_API_KEY;
+    const originalBaseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL;
+    const originalModel = process.env.OPENAI_COMPATIBLE_MODEL;
+    const originalGenerationApi = process.env.OPENAI_COMPATIBLE_GENERATION_API;
+    const aiYaml = convertNovelToScript({ title: "雨夜来信", text: validText }).yaml;
+    const parsed = validateScriptYaml(aiYaml);
+    if (!parsed.ok) {
+      throw new Error("test fixture must be valid");
+    }
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          output: [
+            {
+              type: "message",
+              content: [{ type: "output_text", text: JSON.stringify(parsed.document) }]
+            }
+          ]
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    vi.stubEnv("NODE_ENV", "production");
+    process.env.AI_PROVIDER = "openai-compatible";
+    process.env.OPENAI_COMPATIBLE_API_KEY = "env-key";
+    process.env.OPENAI_COMPATIBLE_BASE_URL = "https://env.example.test/v1";
+    process.env.OPENAI_COMPATIBLE_MODEL = "env-model";
+    process.env.OPENAI_COMPATIBLE_GENERATION_API = "responses";
+    globalThis.fetch = fetchMock;
+
+    try {
+      const response = await POST(
+        jsonRequest({
+          title: "雨夜来信",
+          text: validText,
+          modelConfig: {
+            provider: "openai-compatible",
+            apiKey: "request-key",
+            baseUrl: "https://request.example.test/v1",
+            model: "request-model",
+            temperature: 0.4
+          }
+        })
+      );
+      const body = await response.json();
+      const requestBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)) as {
+        model: string;
+        temperature: number;
+      };
+      const serializedRequestBody = JSON.stringify(requestBody);
+
+      expect(response.status).toBe(200);
+      expect(body.report.provider).toBe("openai-compatible");
+      expect(fetchMock.mock.calls[0][0]).toBe("https://env.example.test/v1/responses");
+      expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+        authorization: "Bearer env-key"
+      });
+      expect(requestBody).toMatchObject({
+        model: "env-model",
+        temperature: 0.4
+      });
+      expect(serializedRequestBody).not.toContain("request-key");
+      expect(serializedRequestBody).not.toContain("request-model");
+      expect(serializedRequestBody).not.toContain("request.example.test");
+    } finally {
+      globalThis.fetch = originalFetch;
+      vi.stubEnv("NODE_ENV", originalNodeEnv);
+      process.env.AI_PROVIDER = originalProvider;
+      process.env.OPENAI_COMPATIBLE_API_KEY = originalApiKey;
+      process.env.OPENAI_COMPATIBLE_BASE_URL = originalBaseUrl;
+      process.env.OPENAI_COMPATIBLE_MODEL = originalModel;
+      process.env.OPENAI_COMPATIBLE_GENERATION_API = originalGenerationApi;
     }
   });
 
