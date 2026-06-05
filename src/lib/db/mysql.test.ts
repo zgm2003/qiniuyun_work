@@ -12,6 +12,13 @@ describe("parseMysqlDsn", () => {
     });
   });
 
+  it("parses URL encoded credentials", () => {
+    expect(parseMysqlDsn("mysql://app%40user:p%40ss%2Fword@127.0.0.1:3306/qiniuyun")).toMatchObject({
+      user: "app@user",
+      password: "p@ss/word"
+    });
+  });
+
   it("parses Go tcp DSN used by the docker env", () => {
     expect(parseMysqlDsn("root:admin_go_local@tcp(host.docker.internal:3307)/admin?charset=utf8mb4&parseTime=True&loc=Local")).toMatchObject({
       host: "host.docker.internal",
