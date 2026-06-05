@@ -34,4 +34,16 @@ describe("database schema", () => {
     expect(schema).toContain("KEY idx_projects_owner_updated (owner_user_id, updated_at)");
     expect(schema).toContain("CONSTRAINT fk_projects_owner FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL");
   });
+
+  it("defines prompt templates as versioned fixed-format records", () => {
+    expect(schema).toContain("CREATE TABLE IF NOT EXISTS prompt_templates");
+    expect(schema).toContain("template_key VARCHAR(100) NOT NULL");
+    expect(schema).toContain("version VARCHAR(32) NOT NULL");
+    expect(schema).toContain("format ENUM('yaml', 'json') NOT NULL");
+    expect(schema).toContain("system_prompt TEXT NOT NULL");
+    expect(schema).toContain("user_prompt_template MEDIUMTEXT NOT NULL");
+    expect(schema).toContain("enabled TINYINT(1) NOT NULL DEFAULT 1");
+    expect(schema).toContain("UNIQUE KEY uk_prompt_templates_key_version (template_key, version)");
+    expect(schema).toContain("KEY idx_prompt_templates_lookup (template_key, enabled, updated_at)");
+  });
 });
