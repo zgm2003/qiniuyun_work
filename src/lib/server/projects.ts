@@ -18,7 +18,14 @@ export type ProjectRecord = {
   updatedAt: string;
 };
 
-export type ProjectListItem = Pick<ProjectRecord, "id" | "title" | "status" | "createdAt" | "updatedAt">;
+export type GenerationRunSummary = Pick<
+  GenerationRunRecord,
+  "id" | "projectId" | "provider" | "model" | "status" | "errorMessage" | "createdAt"
+>;
+
+export type ProjectListItem = Pick<ProjectRecord, "id" | "title" | "status" | "createdAt" | "updatedAt"> & {
+  latestGenerationRun: GenerationRunSummary | null;
+};
 
 export type ProjectDetail = ProjectRecord & {
   latestVersion: ScriptVersionRecord | null;
@@ -75,6 +82,13 @@ type ProjectRow = RowDataPacket & {
   status: ProjectStatus;
   created_at: Date;
   updated_at: Date;
+  latest_run_id?: string | null;
+  latest_run_project_id?: string | null;
+  latest_run_provider?: ProviderName | null;
+  latest_run_model?: string | null;
+  latest_run_status?: GenerationRunStatus | null;
+  latest_run_error_message?: string | null;
+  latest_run_created_at?: Date | null;
 };
 
 type ScriptVersionRow = RowDataPacket & {
@@ -124,6 +138,26 @@ function mapProjectRow(row: ProjectRow): ProjectRecord {
     status: row.status,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString()
+  };
+}
+
+function mapLatestGenerationRun(row: ProjectRow): GenerationRunSummary | null {
+  if (!row.latest_run_id) {
+    return null;
+  }
+
+  if (!row.latest_run_project_id || !row.latest_run_provider || !row.latest_run_model || !row.latest_run_status || !row.latest_run_created_at) {
+    throw new Error("generation_runs join returned an incomplete row");
+  }
+
+  return {
+    id: row.latest_run_id,
+    projectId: row.latest_run_project_id,
+    provider: row.latest_run_provider,
+    model: row.latest_run_model,
+    status: row.latest_run_status,
+    errorMessage: row.latest_run_error_message ?? null,
+    createdAt: row.latest_run_created_at.toISOString()
   };
 }
 
@@ -186,18 +220,37 @@ export async function createProject(input: CreateProjectInput, runner?: MysqlQue
 
 export async function listProjects(runner?: MysqlQueryRunner): Promise<ProjectListItem[]> {
   const [rows] = await resolveRunner(runner).query<ProjectRow[]>(
-    `SELECT id, title, source_text, status, created_at, updated_at
-     FROM projects
-     ORDER BY updated_at DESC`
+    `SELECT p.id, p.title, p.source_text, p.status, p.created_at, p.updated_at,
+            gr.id AS latest_run_id,
+            gr.project_id AS latest_run_project_id,
+            gr.provider AS latest_run_provider,
+            gr.model AS latest_run_model,
+            gr.status AS latest_run_status,
+            gr.error_message AS latest_run_error_message,
+            gr.created_at AS latest_run_created_at
+     FROM projects p
+     LEFT JOIN generation_runs gr
+       ON gr.id = (
+         SELECT inner_gr.id
+         FROM generation_runs inner_gr
+         WHERE inner_gr.project_id = p.id
+         ORDER BY inner_gr.created_at DESC, inner_gr.id DESC
+         LIMIT 1
+       )
+     ORDER BY p.updated_at DESC`
   );
 
-  return rows.map(mapProjectRow).map(({ id, title, status, createdAt, updatedAt }) => ({
-    id,
-    title,
-    status,
-    createdAt,
-    updatedAt
-  }));
+  return rows.map((row) => {
+    const project = mapProjectRow(row);
+    return {
+      id: project.id,
+      title: project.title,
+      status: project.status,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      latestGenerationRun: mapLatestGenerationRun(row)
+    };
+  });
 }
 
 export async function getProject(projectId: string, runner?: MysqlQueryRunner): Promise<ProjectDetail | null> {

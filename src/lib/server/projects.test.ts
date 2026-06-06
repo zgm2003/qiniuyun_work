@@ -96,6 +96,15 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
     validation_json: string;
     created_at: Date;
   }> = [];
+  generationRuns: Array<{
+    id: string;
+    project_id: string;
+    provider: "mock" | "openai-compatible";
+    model: string;
+    status: "running" | "succeeded" | "failed";
+    error_message: string | null;
+    created_at: Date;
+  }> = [];
 
   async query<T extends RowDataPacket[] | RowDataPacket[][] | ResultSetHeader>(
     sql: string,
@@ -112,6 +121,28 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
         updated_at: updatedAt
       });
       return [{ affectedRows: 1 } as ResultSetHeader as T];
+    }
+
+    if (sql.includes("FROM projects p") && sql.includes("LEFT JOIN generation_runs")) {
+      const rows = [...this.projects]
+        .sort((left, right) => right.updated_at.getTime() - left.updated_at.getTime())
+        .map((project) => {
+          const latestRun = this.generationRuns
+            .filter((run) => run.project_id === project.id)
+            .sort((left, right) => right.created_at.getTime() - left.created_at.getTime() || right.id.localeCompare(left.id))[0];
+
+          return {
+            ...project,
+            latest_run_id: latestRun?.id ?? null,
+            latest_run_project_id: latestRun?.project_id ?? null,
+            latest_run_provider: latestRun?.provider ?? null,
+            latest_run_model: latestRun?.model ?? null,
+            latest_run_status: latestRun?.status ?? null,
+            latest_run_error_message: latestRun?.error_message ?? null,
+            latest_run_created_at: latestRun?.created_at ?? null
+          };
+        });
+      return [rows as RowDataPacket[] as T];
     }
 
     if (sql.includes("FROM projects") && sql.includes("ORDER BY updated_at DESC")) {
@@ -327,6 +358,42 @@ describe("project persistence service", () => {
     const projects = await listProjects(runner);
 
     expect(projects.map((project) => project.title)).toEqual(["项目 B", "项目 A"]);
+    expect(projects[0].latestGenerationRun).toBeNull();
+  });
+
+  it("lists projects with the latest generation run summary", async () => {
+    const runner = new FakeProjectStoreRunner();
+    const project = await createProject({ title: "项目 A", sourceText: "原文 A" }, runner);
+    runner.generationRuns.push({
+      id: "run-old",
+      project_id: project.id,
+      provider: "openai-compatible",
+      model: "cheap-old",
+      status: "failed",
+      error_message: "旧错误",
+      created_at: new Date("2026-06-05T01:00:00.000Z")
+    });
+    runner.generationRuns.push({
+      id: "run-new",
+      project_id: project.id,
+      provider: "openai-compatible",
+      model: "cheap-new",
+      status: "succeeded",
+      error_message: null,
+      created_at: new Date("2026-06-05T02:00:00.000Z")
+    });
+
+    const projects = await listProjects(runner);
+
+    expect(projects[0].latestGenerationRun).toEqual({
+      id: "run-new",
+      projectId: project.id,
+      provider: "openai-compatible",
+      model: "cheap-new",
+      status: "succeeded",
+      errorMessage: null,
+      createdAt: "2026-06-05T02:00:00.000Z"
+    });
   });
 
   it("loads the latest script version for a project", async () => {
