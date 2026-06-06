@@ -4,7 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 import { ModelSettingsDialog } from "./model-settings-dialog";
 import { ScriptPage } from "./script-page";
 import { WorkbenchShell } from "./workbench-shell";
-import { WorkspacePage } from "./workspace-page";
+import { ProjectPersistenceCard, WorkspacePage } from "./workspace-page";
 import { WorkspaceProvider } from "./workspace-context";
 
 vi.mock("next/navigation", () => ({
@@ -47,6 +47,39 @@ describe("WorkspacePage model configuration", () => {
     expect(markup).toContain("当前未绑定项目库项目");
     expect(markup).toContain("保存到项目库");
     expect(markup).not.toContain("质量报告");
+  });
+
+  test("renders project persistence save button as disabled while conversion is pending", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ProjectPersistenceCard, {
+        isBound: false,
+        isPending: true,
+        message: "生成时会自动创建项目；也可以先手动保存当前工作区。",
+        onSave: () => undefined
+      })
+    );
+
+    expect(markup).toContain('aria-label="项目库存储状态"');
+    expect(markup).toContain('type="button"');
+    expect(markup).toContain("disabled");
+    expect(markup).toContain("当前未绑定项目库项目");
+    expect(markup).toContain("保存到项目库");
+  });
+
+  test("renders project persistence bound state", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ProjectPersistenceCard, {
+        isBound: true,
+        isPending: false,
+        message: "当前绑定服务端项目：雨夜来信",
+        onSave: () => undefined
+      })
+    );
+
+    expect(markup).toContain("已绑定项目库项目");
+    expect(markup).toContain("当前绑定服务端项目：雨夜来信");
+    expect(markup).toContain('class="outline-pill ok"');
+    expect(markup).not.toContain("disabled");
   });
 
   test("places model settings in the top navigation", () => {

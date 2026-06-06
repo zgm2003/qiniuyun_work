@@ -11,7 +11,6 @@ export function WorkspacePage() {
   const chapterCount = workspace.chapterOutline.chapterCount;
   const minimumChapterText = `${workspace.chapterOutline.minimumChapters} 章`;
   const hasGeneratedYaml = workspace.yamlText.trim().length > 0;
-  const projectLibraryStateText = workspace.serverProjectId ? "已绑定项目库项目" : "当前未绑定项目库项目";
   const projectLibraryMessage = workspace.serverProjectMessage.trim().length > 0
     ? workspace.serverProjectMessage
     : "生成时会自动创建项目；也可以先手动保存当前工作区。";
@@ -137,22 +136,12 @@ export function WorkspacePage() {
 
             <p className="conversion-copy">先让章节数达标，再生成结构化剧本。生成后到编辑页检查 Schema、继续打磨并导出。</p>
 
-            <div className="project-persistence-card" aria-label="项目库存储状态">
-              <div>
-                <p className="section-kicker">Project Library</p>
-                <strong>项目库存储</strong>
-                <span className={workspace.serverProjectId ? "outline-pill ok" : "outline-pill"}>{projectLibraryStateText}</span>
-              </div>
-              <p>{projectLibraryMessage}</p>
-              <button
-                className="secondary-button project-save-button"
-                type="button"
-                disabled={workspace.isPending}
-                onClick={() => void workspace.saveCurrentWorkspaceToServer()}
-              >
-                保存到项目库
-              </button>
-            </div>
+            <ProjectPersistenceCard
+              isBound={Boolean(workspace.serverProjectId)}
+              isPending={workspace.isPending}
+              message={projectLibraryMessage}
+              onSave={() => void workspace.saveCurrentWorkspaceToServer()}
+            />
 
             <button
               className="primary-button conversion-button"
@@ -209,6 +198,34 @@ export function WorkspacePage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export function ProjectPersistenceCard({
+  isBound,
+  isPending,
+  message,
+  onSave
+}: {
+  isBound: boolean;
+  isPending: boolean;
+  message: string;
+  onSave: () => void;
+}) {
+  const stateText = isBound ? "已绑定项目库项目" : "当前未绑定项目库项目";
+
+  return (
+    <div className="project-persistence-card" aria-label="项目库存储状态">
+      <div>
+        <p className="section-kicker">Project Library</p>
+        <strong>项目库存储</strong>
+        <span className={isBound ? "outline-pill ok" : "outline-pill"}>{stateText}</span>
+      </div>
+      <p>{message}</p>
+      <button className="secondary-button project-save-button" type="button" disabled={isPending} onClick={onSave}>
+        保存到项目库
+      </button>
+    </div>
   );
 }
 
