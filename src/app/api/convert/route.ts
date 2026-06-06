@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { convertNovelWithProvider, type RequestModelConfig } from "@/lib/ai-provider";
+import { createScriptVersion, getProject, recordGenerationRun } from "@/lib/server/projects";
 
 const ModelConfigSchema = z.object({
   provider: z.enum(["mock", "openai-compatible"]),
@@ -15,6 +16,7 @@ const ModelConfigSchema = z.object({
 });
 
 const ConvertRequestSchema = z.object({
+  projectId: z.string().refine((value) => value.trim().length > 0, "projectId 不能为空").optional(),
   title: z.string().min(1, "标题不能为空"),
   text: z.string().min(1, "小说正文不能为空"),
   modelConfig: ModelConfigSchema.optional()
@@ -39,6 +41,47 @@ function sanitizeModelConfigForRuntime(modelConfig: RequestModelConfig | undefin
   };
 }
 
+function resolveRunProvider(modelConfig: RequestModelConfig | undefined): "mock" | "openai-compatible" {
+  if (process.env.NODE_ENV === "production") {
+    return "openai-compatible";
+  }
+
+  return modelConfig?.provider ?? "mock";
+}
+
+function resolveRunModel(modelConfig: RequestModelConfig | undefined): string {
+  const provider = resolveRunProvider(modelConfig);
+  if (provider === "mock") {
+    return "mock";
+  }
+
+  const configuredModel = modelConfig?.model?.trim() || process.env.OPENAI_COMPATIBLE_MODEL?.trim();
+  if (configuredModel) {
+    return configuredModel;
+  }
+
+  return "server-default";
+}
+
+async function recordBoundGenerationRun(input: {
+  projectId: string | undefined;
+  modelConfig: RequestModelConfig | undefined;
+  status: "succeeded" | "failed";
+  errorMessage: string | null;
+}) {
+  if (!input.projectId) {
+    return;
+  }
+
+  await recordGenerationRun({
+    projectId: input.projectId,
+    provider: resolveRunProvider(input.modelConfig),
+    model: resolveRunModel(input.modelConfig),
+    status: input.status,
+    errorMessage: input.errorMessage
+  });
+}
+
 export async function POST(request: Request) {
   let payload: unknown;
 
@@ -54,6 +97,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: firstIssue.message }, { status: 400 });
   }
 
+  if (parsed.data.projectId) {
+    const project = await getProject(parsed.data.projectId);
+    if (!project) {
+      return NextResponse.json({ error: "项目不存在" }, { status: 404 });
+    }
+  }
+
   try {
     const result = await convertNovelWithProvider(
       parsed.data,
@@ -61,9 +111,28 @@ export async function POST(request: Request) {
       fetch,
       sanitizeModelConfigForRuntime(parsed.data.modelConfig)
     );
+    if (parsed.data.projectId) {
+      await createScriptVersion({
+        projectId: parsed.data.projectId,
+        yaml: result.yaml,
+        report: result.report
+      });
+    }
+    await recordBoundGenerationRun({
+      projectId: parsed.data.projectId,
+      modelConfig: parsed.data.modelConfig,
+      status: "succeeded",
+      errorMessage: null
+    });
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "转换失败";
+    await recordBoundGenerationRun({
+      projectId: parsed.data.projectId,
+      modelConfig: parsed.data.modelConfig,
+      status: "failed",
+      errorMessage: message
+    });
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

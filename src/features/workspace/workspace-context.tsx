@@ -26,17 +26,9 @@ import {
   type ServerProjectDetail,
   updateServerProject
 } from "./server-projects-client";
+import { convertWorkspaceOnServer } from "./workspace-convert-client";
 
 export type ProviderName = "mock" | "openai-compatible";
-
-type ConvertSuccess = {
-  yaml: string;
-  report: ConversionReport;
-};
-
-type ConvertFailure = {
-  error: string;
-};
 
 export type ModelListStatus = "idle" | "loading" | "ready" | "error";
 
@@ -100,10 +92,6 @@ export type WorkspaceContextValue = {
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
-
-function isConvertFailure(value: ConvertSuccess | ConvertFailure): value is ConvertFailure {
-  return "error" in value;
-}
 
 function formatValidationErrors(errors: ScriptValidationError[]): string {
   return errors.map((error) => `${error.path}: ${error.message}`).join("\n");
@@ -410,28 +398,36 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   function convert() {
     setError("");
     startTransition(async () => {
-      const modelConfig = buildConvertModelConfig({
-        provider,
-        baseUrl,
-        model,
-        temperature,
-        apiKey,
-        nodeEnv: process.env.NODE_ENV as RuntimeEnvironment
-      });
-      const response = await fetch("/api/convert", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ title, text: novelText, modelConfig })
-      });
-      const body = (await response.json()) as ConvertSuccess | ConvertFailure;
+      try {
+        const savedProject = serverProjectId
+          ? await updateServerProject(serverProjectId, title, novelText)
+          : await createServerProject(title, novelText);
+        setServerProjectId(savedProject.id);
+        setServerProjectMessage(`已绑定服务端项目：${savedProject.title}，生成记录和 YAML 版本会写入数据库。`);
 
-      if (!response.ok || isConvertFailure(body)) {
-        setError(isConvertFailure(body) ? body.error : "转换失败");
-        return;
+        const modelConfig = buildConvertModelConfig({
+          provider,
+          baseUrl,
+          model,
+          temperature,
+          apiKey,
+          nodeEnv: process.env.NODE_ENV as RuntimeEnvironment
+        });
+        const body = await convertWorkspaceOnServer({
+          projectId: savedProject.id,
+          title,
+          text: novelText,
+          modelConfig
+        });
+
+        setYamlText(body.yaml);
+        setReport(body.report);
+        setServerProjectMessage(`已生成并保存 YAML 版本：${savedProject.title}`);
+      } catch (convertError) {
+        const message = convertError instanceof Error ? convertError.message : "转换失败";
+        setError(message);
+        setServerProjectMessage(message);
       }
-
-      setYamlText(body.yaml);
-      setReport(body.report);
     });
   }
 

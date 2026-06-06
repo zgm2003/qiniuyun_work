@@ -1,6 +1,7 @@
-import type { RowDataPacket } from "mysql2/promise";
+import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { getMysqlPool, type MysqlQueryRunner } from "@/lib/db/mysql";
 import {
+  DEFAULT_PROMPT_TEMPLATES,
   resolveDefaultPromptTemplate,
   type PromptTemplateFormat,
   type PromptTemplateKey,
@@ -31,12 +32,40 @@ function mapPromptTemplateRow(row: PromptTemplateRow): PromptTemplateRecord {
   };
 }
 
+export async function ensureDefaultPromptTemplates(runner?: MysqlQueryRunner): Promise<void> {
+  const db = resolveRunner(runner);
+  const now = new Date();
+
+  for (const template of DEFAULT_PROMPT_TEMPLATES) {
+    await db.query<ResultSetHeader>(
+      `INSERT INTO prompt_templates (
+         id, template_key, version, format, system_prompt, user_prompt_template, enabled, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         id = id`,
+      [
+        template.id,
+        template.templateKey,
+        template.version,
+        template.format,
+        template.systemPrompt,
+        template.userPromptTemplate,
+        1,
+        now,
+        now
+      ]
+    );
+  }
+}
+
 export async function getPromptTemplateByKey(
   templateKey: PromptTemplateKey,
   runner?: MysqlQueryRunner
 ): Promise<PromptTemplateRecord> {
   try {
-    const [rows] = await resolveRunner(runner).query<PromptTemplateRow[]>(
+    const db = resolveRunner(runner);
+    await ensureDefaultPromptTemplates(db);
+    const [rows] = await db.query<PromptTemplateRow[]>(
       `SELECT id, template_key, version, format, system_prompt, user_prompt_template
        FROM prompt_templates
        WHERE template_key = ? AND enabled = 1

@@ -70,6 +70,7 @@ describe("default prompt templates", () => {
       "script_generation_chat_yaml",
       "script_generation_responses_json"
     ]);
+    expect(DEFAULT_PROMPT_TEMPLATES.every((template) => template.id.length <= 36)).toBe(true);
     expect(resolveDefaultPromptTemplate("script_generation_chat_yaml").format).toBe("yaml");
     expect(resolveDefaultPromptTemplate("script_generation_responses_json").format).toBe("json");
   });

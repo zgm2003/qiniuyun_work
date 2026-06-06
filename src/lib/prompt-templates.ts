@@ -80,7 +80,7 @@ export function renderPromptTemplate(template: string, variables: PromptTemplate
 
 export const DEFAULT_PROMPT_TEMPLATES: PromptTemplateRecord[] = [
   {
-    id: "default-script-generation-chat-yaml-v1",
+    id: "prompt-chat-yaml-v1",
     templateKey: "script_generation_chat_yaml",
     version: "v1",
     format: "yaml",
@@ -132,7 +132,7 @@ summary:
 {{chapters}}`
   },
   {
-    id: "default-script-generation-responses-json-v1",
+    id: "prompt-responses-json-v1",
     templateKey: "script_generation_responses_json",
     version: "v1",
     format: "json",
