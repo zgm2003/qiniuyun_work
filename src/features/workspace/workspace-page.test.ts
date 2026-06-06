@@ -61,6 +61,17 @@ describe("WorkspacePage model configuration", () => {
     expect(markup.match(/class="model-settings-trigger"/g)).toHaveLength(1);
   });
 
+  test("places the theme toggle beside model settings in the top navigation", () => {
+    const markup = renderWithWorkspaceProvider(
+      "development",
+      createElement(WorkbenchShell, null, createElement(WorkspacePage))
+    );
+
+    expect(markup).toContain("theme-toggle-button");
+    expect(markup).toContain("切换深色主题");
+    expect(markup.indexOf("theme-toggle-button")).toBeLessThan(markup.indexOf("model-settings-trigger"));
+  });
+
   test("opens development-only request model fields inside the settings dialog", () => {
     const markup = renderWithWorkspaceProvider("development", createElement(ModelSettingsDialog, { defaultOpen: true }));
 

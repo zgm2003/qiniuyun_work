@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { ModelSettingsDialog } from "./model-settings-dialog";
+import { ThemeToggleButton } from "./theme-toggle-button";
 import { getActiveWorkbenchRoute, WORKBENCH_NAV_ITEMS } from "./workbench-nav";
 
 export function WorkbenchShell({ children }: { children: ReactNode }) {
@@ -29,6 +30,7 @@ export function WorkbenchShell({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <div className="top-nav-actions">
+            <ThemeToggleButton />
             <ModelSettingsDialog />
           </div>
         </div>

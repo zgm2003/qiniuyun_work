@@ -192,14 +192,9 @@ export function WorkspacePage() {
 }
 
 function StepPill({ index, label, tone = "light" }: { index: string; label: string; tone?: "dark" | "light" }) {
-  const className =
-    tone === "dark"
-      ? "inline-flex items-center gap-2 rounded-full bg-neutral-950 px-4 py-2.5 text-sm font-black text-white shadow-[0_14px_34px_rgba(23,23,23,0.22)]"
-      : "inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/85 px-4 py-2.5 text-sm font-black text-neutral-900 shadow-[0_12px_30px_rgba(15,23,42,0.07)]";
-
   return (
-    <span className={className}>
-      <span className={tone === "dark" ? "text-white/45" : "text-neutral-400"}>{index}</span>
+    <span className={tone === "dark" ? "step-pill dark" : "step-pill"}>
+      <span className="step-pill-index">{index}</span>
       {label}
     </span>
   );

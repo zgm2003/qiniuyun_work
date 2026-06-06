@@ -10,4 +10,18 @@ describe("global CSS guardrails", () => {
     expect(css).toContain("max-height:");
     expect(css).toContain("overflow-y: auto;");
   });
+
+  it("defines dark theme tokens and animated theme-transition hooks", () => {
+    expect(css).toContain("html.dark");
+    expect(css).toContain(".theme-toggle-button");
+    expect(css).toContain("::view-transition-new(root)");
+  });
+
+  it("hides scrollbars globally without disabling scrolling", () => {
+    expect(css).toContain("scrollbar-width: none;");
+    expect(css).toContain("-ms-overflow-style: none;");
+    expect(css).toContain("::-webkit-scrollbar");
+    expect(css).not.toContain("scrollbar-width: thin;");
+    expect(css).not.toContain("overflow: hidden; /* global scrollbar hide */");
+  });
 });
