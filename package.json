@@ -8,7 +8,9 @@
     "start": "next start -p 3001",
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:schema": "node scripts/apply-db-sql.mjs src/lib/db/schema.sql",
+    "db:migrate:ai-settings": "node scripts/apply-db-sql.mjs src/lib/db/migrations/2026-06-06-ai-settings.sql"
   },
   "dependencies": {
     "mysql2": "^3.22.4",

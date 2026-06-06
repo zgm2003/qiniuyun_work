@@ -155,6 +155,18 @@ MYSQL_DSN=mysql://app_user:app_password@127.0.0.1:3306/qiniuyun
 MYSQL_CONNECTION_LIMIT=10
 ```
 
+首次初始化数据库：
+
+```bash
+npm run db:schema
+```
+
+如果旧库报 `Table 'qiniuyun.ai_settings' doesn't exist`，执行这条迁移即可；它会创建 `ai_settings`，并在旧 `ai_providers` / `ai_provider_models` 存在时迁移默认配置：
+
+```bash
+npm run db:migrate:ai-settings
+```
+
 Redis 和管理端仍是后续阶段；Prompt 模板化和唯一 AI 配置加密入库已完成基础模块和默认 fallback。
 
 ## 本地文本导入
