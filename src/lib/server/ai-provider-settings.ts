@@ -15,6 +15,7 @@ export type SaveAIProviderSettingsInput = {
   driver?: AIProviderDriver;
   baseUrl: string;
   apiKey: string;
+  defaultModel?: string;
   status?: AIProviderStatus;
   isDefault?: boolean;
 };
@@ -164,6 +165,29 @@ async function getProviderSecret(providerId: string, runner: MysqlQueryRunner): 
   return rows[0];
 }
 
+async function saveDefaultProviderModel(providerId: string, model: string, runner: MysqlQueryRunner): Promise<void> {
+  const modelId = requireTrimmed(model, "默认模型不能为空");
+  const now = new Date();
+
+  await runner.query<ResultSetHeader>(
+    `UPDATE ai_provider_models
+     SET is_default = 0, updated_at = ?
+     WHERE provider_id = ?`,
+    [now, providerId]
+  );
+  await runner.query<ResultSetHeader>(
+    `INSERT INTO ai_provider_models (
+       id, provider_id, model_id, display_name, enabled, is_default, last_seen_at, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       display_name = VALUES(display_name),
+       enabled = VALUES(enabled),
+       is_default = VALUES(is_default),
+       updated_at = VALUES(updated_at)`,
+    [randomUUID(), providerId, modelId, modelId, 1, 1, now, now, now]
+  );
+}
+
 export async function saveAIProviderSettings(
   input: SaveAIProviderSettingsInput,
   runner?: MysqlQueryRunner,
@@ -228,6 +252,10 @@ export async function saveAIProviderSettings(
         now
       ]
     );
+  }
+
+  if (input.defaultModel !== undefined) {
+    await saveDefaultProviderModel(id, input.defaultModel, db);
   }
 
   const provider = await getAIProviderSettings(id, db);

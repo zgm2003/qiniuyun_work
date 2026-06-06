@@ -69,6 +69,7 @@ describe("WorkspacePage model configuration", () => {
     expect(markup).toContain("API Key（仅本次请求）");
     expect(markup).toContain(">Base URL<");
     expect(markup).toContain("获取模型");
+    expect(markup).toContain("保存到数据库");
   });
 
   test("opens production settings as a server-config explanation without browser credentials", () => {

@@ -120,6 +120,29 @@ export function ModelSettingsDialog({ defaultOpen = false }: ModelSettingsDialog
                   placeholder="不会保存到本地草稿或仓库"
                 />
               </label>
+
+              <div className="model-settings-actions">
+                <button
+                  className="primary-button model-settings-save-button"
+                  type="button"
+                  disabled={!workspace.canSaveProviderSettings || workspace.isProviderSettingsPending}
+                  onClick={workspace.saveProviderSettingsToServer}
+                >
+                  {workspace.isProviderSettingsPending ? "保存中..." : "保存到数据库"}
+                </button>
+              </div>
+
+              <p
+                className={
+                  workspace.providerSettingsMessage.includes("失败") ||
+                  workspace.providerSettingsMessage.includes("不能为空") ||
+                  workspace.providerSettingsMessage.includes("未配置")
+                    ? "model-list-message error"
+                    : "model-list-message"
+                }
+              >
+                {workspace.providerSettingsMessage}
+              </p>
             </div>
           )}
         </div>

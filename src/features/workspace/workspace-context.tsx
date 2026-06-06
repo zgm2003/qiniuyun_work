@@ -19,6 +19,7 @@ import { buildModelOptions } from "./model-options";
 import { fetchProviderModels } from "./model-list-client";
 import { buildConvertModelConfig, type RuntimeEnvironment } from "./model-request-config";
 import { DEFAULT_PRODUCT_MODEL, DEFAULT_PRODUCT_PROVIDER } from "./provider-options";
+import { saveProviderSettings } from "./provider-settings-client";
 import {
   createServerProject,
   saveServerScriptVersion,
@@ -67,9 +68,12 @@ export type WorkspaceContextValue = {
   modelOptions: ReturnType<typeof buildModelOptions>;
   modelListStatus: ModelListStatus;
   modelListMessage: string;
+  providerSettingsMessage: string;
   canFetchModels: boolean;
+  canSaveProviderSettings: boolean;
   isProductionRuntime: boolean;
   isModelListPending: boolean;
+  isProviderSettingsPending: boolean;
   isPending: boolean;
   drafts: LocalProjectDraft[];
   chapters: ReturnType<typeof parseNovelChapters>;
@@ -89,6 +93,7 @@ export type WorkspaceContextValue = {
   loadServerProjectIntoWorkspace: (project: ServerProjectDetail) => void;
   saveCurrentWorkspaceToServer: () => Promise<void>;
   fetchModels: () => Promise<void>;
+  saveProviderSettingsToServer: () => Promise<void>;
   convert: () => void;
   downloadYaml: () => void;
   formatQualityStatus: (status: ScriptQualityStatus) => string;
@@ -128,6 +133,7 @@ const EMPTY_DRAFTS: LocalProjectDraft[] = [];
 const LOCAL_DRAFTS_CHANGED_EVENT = "novel-to-script-ai:local-drafts-changed";
 const MODEL_LIST_DEVELOPMENT_MESSAGE = "填写 API Key 后可从供应商实时获取模型列表。";
 const MODEL_LIST_PRODUCTION_MESSAGE = "生产环境使用服务端 AI 配置，不从浏览器获取模型列表。";
+const PROVIDER_SETTINGS_IDLE_MESSAGE = "点击保存会加密 API Key 并写入数据库；不会写入 localStorage 草稿。";
 let cachedDraftsRaw: string | null | undefined;
 let cachedDrafts: LocalProjectDraft[] = EMPTY_DRAFTS;
 
@@ -197,7 +203,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [modelListMessage, setModelListMessage] = useState(
     isProductionRuntime ? MODEL_LIST_PRODUCTION_MESSAGE : MODEL_LIST_DEVELOPMENT_MESSAGE
   );
+  const [providerSettingsMessage, setProviderSettingsMessage] = useState(PROVIDER_SETTINGS_IDLE_MESSAGE);
   const [isModelListPending, setIsModelListPending] = useState(false);
+  const [isProviderSettingsPending, setIsProviderSettingsPending] = useState(false);
   const [isPending, startTransition] = useTransition();
   const drafts = useSyncExternalStore(subscribeLocalDrafts, getLocalDraftsSnapshot, getServerDraftsSnapshot);
 
@@ -367,6 +375,38 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function saveProviderSettingsToServer() {
+    const trimmedBaseUrl = baseUrl.trim();
+    const trimmedApiKey = apiKey.trim();
+    const trimmedModel = model.trim();
+
+    if (provider !== "openai-compatible" || !trimmedBaseUrl || !trimmedApiKey || !trimmedModel) {
+      setProviderSettingsMessage("请先填写 Base URL、API Key 和默认模型。");
+      return;
+    }
+
+    setError("");
+    setIsProviderSettingsPending(true);
+    setProviderSettingsMessage("正在保存到数据库...");
+
+    try {
+      await saveProviderSettings({
+        provider: "openai-compatible",
+        name: "OpenAI Compatible",
+        baseUrl: trimmedBaseUrl,
+        apiKey: trimmedApiKey,
+        model: trimmedModel
+      });
+      setProviderSettingsMessage("已保存到数据库，后续生产转换会优先使用该配置。");
+    } catch (settingsError) {
+      const message = settingsError instanceof Error ? settingsError.message : "AI provider 保存失败";
+      setError(message);
+      setProviderSettingsMessage(message);
+    } finally {
+      setIsProviderSettingsPending(false);
+    }
+  }
+
   function convert() {
     setError("");
     startTransition(async () => {
@@ -412,6 +452,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const canConvert = title.trim().length > 0 && novelText.trim().length > 0 && chapterOutline.ready;
   const canFetchModels = !isProductionRuntime && provider === "openai-compatible" && Boolean(apiKey.trim());
+  const canSaveProviderSettings =
+    provider === "openai-compatible" && Boolean(baseUrl.trim()) && Boolean(apiKey.trim()) && Boolean(model.trim());
   const modelOptions = useMemo(() => buildModelOptions(modelIds, model), [modelIds, model]);
   const validationText = yamlValidation
     ? yamlValidation.ok
@@ -452,9 +494,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     modelOptions,
     modelListStatus,
     modelListMessage,
+    providerSettingsMessage,
     canFetchModels,
+    canSaveProviderSettings,
     isProductionRuntime,
     isModelListPending,
+    isProviderSettingsPending,
     isPending,
     drafts,
     chapters,
@@ -474,6 +519,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     loadServerProjectIntoWorkspace,
     saveCurrentWorkspaceToServer,
     fetchModels,
+    saveProviderSettingsToServer,
     convert,
     downloadYaml,
     formatQualityStatus

@@ -140,6 +140,16 @@ class FakeProviderDb implements MysqlQueryRunner {
       return [this.models.filter((model) => model.provider_id === providerId) as RowDataPacket[] as T];
     }
 
+    if (sql.includes("UPDATE ai_provider_models") && sql.includes("SET is_default = 0")) {
+      const [providerId] = values as [string];
+      for (const model of this.models) {
+        if (model.provider_id === providerId) {
+          model.is_default = 0;
+        }
+      }
+      return [{ affectedRows: this.models.length } as ResultSetHeader as T];
+    }
+
     if (sql.includes("INSERT INTO ai_provider_models")) {
       const [id, providerId, modelId, displayName, enabled, isDefault, lastSeenAt, createdAt, updatedAt] = values as [
         string,
@@ -246,6 +256,32 @@ describe("AI provider settings service", () => {
     expect(serialized).not.toContain("api_key_iv");
     expect(serialized).not.toContain("api_key_auth_tag");
     expect(serialized).not.toContain("sk-live-secret");
+  });
+
+  it("saves the selected model as the default provider model", async () => {
+    const env = envWithMasterKey();
+    const db = new FakeProviderDb();
+
+    const saved = await saveAIProviderSettings(
+      {
+        name: "Provider",
+        baseUrl: "https://db.example.test",
+        apiKey: "db-key",
+        isDefault: true,
+        defaultModel: "gpt-5.4"
+      },
+      db,
+      env
+    );
+
+    expect(db.models).toHaveLength(1);
+    expect(db.models[0]).toMatchObject({
+      provider_id: saved.id,
+      model_id: "gpt-5.4",
+      display_name: "gpt-5.4",
+      enabled: 1,
+      is_default: 1
+    });
   });
 
   it("resolves default database provider and falls back to env when DB is unusable", async () => {
