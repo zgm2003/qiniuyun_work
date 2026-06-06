@@ -1097,6 +1097,41 @@ input::placeholder {
   line-height: 1.5;
 }
 
+.project-persistence-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  border: 1px solid rgba(207, 202, 192, 0.86);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.68);
+  padding: 14px;
+  box-shadow: 0 12px 30px rgba(26, 24, 20, 0.06);
+}
+
+.project-persistence-card > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.project-persistence-card strong {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.project-persistence-card p {
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.project-save-button {
+  width: 100%;
+}
+
 .next-step-button {
   white-space: nowrap;
 }
@@ -1658,6 +1693,27 @@ input::placeholder {
   line-height: 1.5;
 }
 
+.generation-run-line {
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-weight: 700;
+}
+
+.generation-run-line.ok {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.generation-run-line.bad {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.generation-run-line.neutral {
+  background: var(--info-soft);
+  color: var(--muted-strong);
+}
+
 .draft-card-actions {
   display: flex;
   gap: 10px;
@@ -1896,6 +1952,17 @@ html.dark .source-message,
 html.dark .generated-next-step {
   background: linear-gradient(180deg, rgba(20, 83, 45, 0.34), rgba(31, 29, 26, 0.72));
   border-color: rgba(134, 239, 172, 0.28);
+}
+
+html.dark .project-persistence-card {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+}
+
+html.dark .generation-run-line.neutral {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 html.dark .source-stat.bad,
