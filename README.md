@@ -140,7 +140,7 @@ OPENAI_COMPATIBLE_API_KEY=your_api_key
 
 MySQL 保存服务端项目草稿，但不会替换现有 localStorage 草稿流程。服务端 API 可保存：
 
-- `GET /api/projects`：读取服务端项目草稿列表。
+- `GET /api/projects`：读取服务端项目草稿列表；每个项目包含 `latestGenerationRun`，用于在项目库卡片展示最近一次生成的模型、状态和错误。
 - `POST /api/projects`：保存项目标题和小说原文。
 - `GET /api/projects/[projectId]`：读取项目正文和最新 YAML 版本。
 - `PATCH /api/projects/[projectId]`：更新项目标题和小说原文。
@@ -202,6 +202,7 @@ P5 将小说转剧本 Prompt 拆成版本化模板。运行时只允许固定变
 7. 展示生成的 YAML、Schema 校验和“剧本质量清单”全部通过。
 8. 展示角色、场景、台词统计。
 9. 点击“保存为新草稿”，刷新页面后加载草稿，展示本地持久化。
+   - 工作台会显示“项目库存储”状态；点击“保存到项目库”可手动入库，生成 YAML 时会自动写入项目、YAML 版本和最近生成记录。
 10. 删除草稿，说明当前编辑区不会被清空。
 11. 手动删除 `metadata.title`，展示 Schema 校验失败和质量清单对应失败项。
 12. 恢复字段，展示 Schema 校验通过。
