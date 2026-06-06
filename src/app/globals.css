@@ -1116,12 +1116,16 @@ input::placeholder {
   justify-content: space-between;
 }
 
+.project-persistence-card .section-kicker {
+  flex-basis: 100%;
+}
+
 .project-persistence-card strong {
   font-size: 15px;
   font-weight: 900;
 }
 
-.project-persistence-card p {
+.project-persistence-card > p {
   margin: 0;
   color: var(--muted-strong);
   font-size: 13px;

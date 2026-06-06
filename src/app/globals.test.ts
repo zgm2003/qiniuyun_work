@@ -30,4 +30,13 @@ describe("global CSS guardrails", () => {
     expect(css).toContain(".top-nav nav {\n  justify-self: center;");
     expect(css).toContain(".top-nav-actions {\n  justify-self: end;");
   });
+
+  it("styles visible persistence UI hooks", () => {
+    expect(css).toContain(".project-persistence-card");
+    expect(css).toContain(".project-save-button");
+    expect(css).toContain(".generation-run-line");
+    expect(css).toContain("html.dark .project-persistence-card");
+    expect(css).toContain(".project-persistence-card > p");
+    expect(css).toContain(".project-persistence-card .section-kicker");
+  });
 });
