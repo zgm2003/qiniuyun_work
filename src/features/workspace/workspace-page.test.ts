@@ -35,7 +35,7 @@ describe("WorkspacePage model configuration", () => {
     expect(markup).not.toContain("获取模型");
   });
 
-  test("keeps the visible workbench focused on the novel-to-yaml path", () => {
+  test("keeps the visible workbench focused on the novel-to-yaml path while showing project persistence", () => {
     const markup = renderWithWorkspaceProvider("development", createElement(WorkspacePage));
 
     expect(markup).toContain("小说输入");
@@ -43,8 +43,9 @@ describe("WorkspacePage model configuration", () => {
     expect(markup).toContain("章节大纲预览");
     expect(markup).toContain("生成 YAML 剧本");
     expect(markup).toContain("编辑导出");
-    expect(markup).not.toContain("服务端项目");
-    expect(markup).not.toContain("项目草稿");
+    expect(markup).toContain("项目库存储");
+    expect(markup).toContain("当前未绑定项目库项目");
+    expect(markup).toContain("保存到项目库");
     expect(markup).not.toContain("质量报告");
   });
 
