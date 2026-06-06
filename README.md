@@ -12,9 +12,9 @@
 - 章节大纲预览：转换前展示识别到的章节标题、字数和正文预览。
 - 本地文本导入：支持浏览器本地导入 `.txt` / `.md` 小说文本，不上传服务器。
 - 输入校验：少于 3 个章节直接报错，不生成假结果。
-- 剧本生成：产品界面默认使用 OpenAI-compatible 真实 AI provider。
+- 剧本生成：产品界面默认使用 OpenAI-compatible 真实 AI 能力。
 - 真实 AI 接口：生产默认调用 OpenAI 兼容 Responses API + Structured Outputs，开发可临时回退 Chat Completions。
-- 模型配置面板：开发/本地调试时可为单次转换配置 base URL、model、temperature 和一次性 API Key；生产环境使用服务端配置。
+- 模型配置面板：开发/本地调试时填写唯一 AI 配置（base URL、model、temperature、API Key）；生产环境使用服务端配置。
 - 本地项目草稿：可在浏览器 localStorage 保存、加载、删除当前小说/YAML/转换报告。
 - 服务端项目草稿：提供项目、剧本版本和生成记录的 MySQL 保存 API，方便跨页面继续打磨。
 - YAML Schema：使用 Zod 定义运行时 Schema，并提供设计说明文档。
@@ -58,10 +58,10 @@ Schema 校验 + 剧本质量清单
 - YAML 运行时校验和错误路径展示。
 - 剧本结构质量清单，不做 AI 主观剧情评分。
 - 确定性剧本转换器，仅用于测试、CI 和样例输出。
-- OpenAI-compatible provider 编排。
-- 开发/本地调试请求级模型配置；生产环境不接受浏览器覆盖 API Key、Base URL 或 model。
+- OpenAI-compatible 调用编排。
+- 开发/本地调试唯一 AI 配置；生产环境不接受浏览器覆盖 API Key、Base URL 或 model。
 - 浏览器本地草稿管理，不保存 API Key 和模型配置。
-- MySQL 服务端项目草稿，不保存 API Key、Base URL、provider、model 或 temperature。
+- MySQL 服务端项目草稿表不保存 API Key、Base URL、provider、model 或 temperature；唯一 AI 配置单独加密保存。
 - 转换 API。
 - 前端输入、转换、编辑、校验、导出闭环。
 - 示例小说、示例输出和录屏流程。
@@ -70,7 +70,7 @@ Schema 校验 + 剧本质量清单
 
 ## 后续 Roadmap
 
-当前版本已经覆盖比赛演示闭环。后续增强方向只围绕小说改编主线：局部重写、质量评分、多格式导出、Prompt 模板和 AI 供应商配置。
+当前版本已经覆盖比赛演示闭环。后续增强方向只围绕小说改编主线：局部重写、质量评分、多格式导出、Prompt 模板和唯一 AI 配置。
 
 详细 TODO 见 `docs/future-roadmap.md`。
 
@@ -118,9 +118,9 @@ npm run lint
 npm run build
 ```
 
-## AI Provider 配置
+## AI 配置
 
-产品默认调用 OpenAI 兼容接口。上线环境必须由服务端持有 API Key，浏览器端不填写、不查看真实 Key：
+产品默认调用 OpenAI 兼容接口。上线环境必须由服务端持有 API Key，浏览器端不填写、不查看真实 Key。当前项目只保存一套 AI 运行时配置，不做多供应商、多模型选择：
 
 ```env
 AI_PROVIDER=openai-compatible
@@ -130,11 +130,11 @@ OPENAI_COMPATIBLE_GENERATION_API=responses
 OPENAI_COMPATIBLE_API_KEY=your_api_key
 ```
 
-真实 AI 返回内容仍然必须通过本项目 YAML Schema 校验。校验失败会报错，不会静默兜底。开发/本地调试的 Base URL 可以填写服务根地址或 `/v1` 地址，系统会在缺少 `/v1` 时自动补齐；生产 Base URL 由服务端 env 或数据库配置持有。
+真实 AI 返回内容仍然必须通过本项目 YAML Schema 校验。校验失败会报错，不会静默兜底。开发/本地调试的 Base URL 可以填写服务根地址或 `/v1` 地址，系统会在缺少 `/v1` 时自动补齐；生产 Base URL 由服务端 env 或数据库唯一配置持有。
 
 生产默认使用 Responses API + Structured Outputs。模型先返回严格 JSON 剧本文档，服务端再转换为 YAML 给作者编辑和导出。开发排查时可以设置 `OPENAI_COMPATIBLE_GENERATION_API=chat-completions` 临时回到旧路径；生产目标是 `responses`。
 
-开发环境下，页面上的“模型配置”面板可以为单次转换覆盖 base URL、model、temperature 和一次性 API Key。生产环境应使用服务端配置，不接受浏览器传入 API Key、Base URL 或 model 覆盖。API Key 不写入仓库，也不进入 localStorage 草稿。
+开发环境下，页面上的“模型配置”面板只维护一套 AI 配置：base URL、model、temperature 和 API Key。生产环境应使用服务端配置，不接受浏览器传入 API Key、Base URL 或 model 覆盖。API Key 加密入库，不写入仓库，也不进入 localStorage 草稿。
 
 ## MySQL 持久化配置
 
@@ -148,13 +148,14 @@ MySQL 保存服务端项目草稿，但不会替换现有 localStorage 草稿流
 - `POST /api/projects/[projectId]/generation-runs`：保存一次生成运行记录。
 
 初始化 SQL 在 `src/lib/db/schema.sql`。生产建议单独创建本项目数据库和最小权限连接串，不要复用其他项目 root DSN。
+AI 运行时配置只使用 `ai_settings` 单表固定保存一行：Base URL、model、加密 API Key 和健康检查状态；不再拆 `provider` / `model` 两张表。
 
 ```env
 MYSQL_DSN=mysql://app_user:app_password@127.0.0.1:3306/qiniuyun
 MYSQL_CONNECTION_LIMIT=10
 ```
 
-Redis 和管理端仍是后续阶段；Prompt 模板化和 AI 供应商配置加密入库已完成基础模块和默认 fallback。
+Redis 和管理端仍是后续阶段；Prompt 模板化和唯一 AI 配置加密入库已完成基础模块和默认 fallback。
 
 ## 本地文本导入
 
@@ -172,7 +173,7 @@ Redis 和管理端仍是后续阶段；Prompt 模板化和 AI 供应商配置加
 - 本地草稿：写入浏览器 localStorage，适合演示和单机编辑，不上传服务端。
 - 服务端项目草稿：写入 MySQL，保存小说正文、YAML 剧本版本和生成报告，方便继续打磨。
 
-两类草稿都不保存 API Key、Base URL、model、provider 或 temperature。
+两类草稿都不保存 API Key、Base URL、model、provider 或 temperature。AI Key 只进入独立的加密 AI 配置。
 
 ## Prompt 模板化
 
@@ -182,9 +183,9 @@ P5 将小说转剧本 Prompt 拆成版本化模板。运行时只允许固定变
 
 1. 启动项目：`npm run dev`。
 2. 打开首页。
-3. 点击“导入文本”，选择 `samples/novel-3chapters.txt`；也可点击“加载样例”快速恢复。
-4. 确认标题由文件名生成，且“章节大纲预览”显示 3 章、每章标题、字数和正文预览。
-5. 本地开发录屏时展示“模型配置”面板：填写 OpenAI-compatible base URL、model、temperature 和一次性 API Key；生产录屏不展示/不填写这些敏感字段。
+3. 点击“导入文本”，选择 `samples/novel-3chapters.txt` 或 `samples/novel-3chapters.md`；也可点击“加载样例”快速恢复。
+4. 确认标题由文件名生成，且“章节大纲预览”显示 3 章以上、每章标题、字数和正文预览。
+5. 本地开发录屏时展示“模型配置”面板：填写 OpenAI-compatible base URL、model、temperature 和 API Key；生产录屏不展示/不填写这些敏感字段。
 6. 点击“转换为 YAML 剧本”。
 7. 展示生成的 YAML、Schema 校验和“剧本质量清单”全部通过。
 8. 展示角色、场景、台词统计。
@@ -197,7 +198,8 @@ P5 将小说转剧本 Prompt 拆成版本化模板。运行时只允许固定变
 
 ## 样例文件
 
-- `samples/novel-3chapters.txt`：3 章小说输入样例。
+- `samples/novel-3chapters.txt`：3 章以上小说输入样例，纯文本格式。
+- `samples/novel-3chapters.md`：与 txt 同内容的 Markdown 格式小说输入样例。
 - `samples/output.yaml`：确定性转换器生成的 YAML 剧本样例，用于离线核对 Schema 结构。
 
 ## 持续交付记录

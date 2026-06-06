@@ -897,17 +897,48 @@ input::placeholder {
 .model-settings-form,
 .model-grid,
 .model-live-fields,
-.ui-select-field {
+.ui-select-field,
+.model-fixed-provider {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .model-grid {
-  grid-template-columns: minmax(0, 1fr) 132px;
+  grid-template-columns: minmax(0, 1fr) 166px;
+  align-items: end;
 }
 
 .model-live-fields {
-  margin-top: 2px;
+  margin-top: 0;
+}
+
+.model-fixed-provider {
+  min-height: var(--model-control-height);
+  gap: 3px;
+  justify-content: start;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 10px 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.model-fixed-provider span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.model-fixed-provider strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.model-fixed-provider small {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .model-grid label,
@@ -918,13 +949,13 @@ input::placeholder {
 
 .compact-input {
   height: var(--model-control-height);
-  padding: 0 14px;
+  padding: 0 16px;
 }
 
 .model-field-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
   align-items: end;
 }
 
@@ -932,15 +963,33 @@ input::placeholder {
   min-width: 0;
 }
 
-.model-fetch-button,
 .model-settings-save-button {
-  min-height: 40px;
+  min-height: var(--model-control-height);
   white-space: nowrap;
+}
+
+.model-settings-footer {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 2px;
 }
 
 .model-settings-actions {
   display: flex;
+  flex: 0 0 auto;
   justify-content: flex-end;
+}
+
+.model-settings-footer .model-list-message {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.model-settings-save-button {
+  padding-right: 18px;
+  padding-left: 18px;
 }
 
 .model-list-message,
@@ -1170,7 +1219,7 @@ input::placeholder {
 }
 
 .ui-dialog {
-  width: min(580px, 100%);
+  width: min(724px, 100%);
   max-height: calc(100vh - 48px);
   overflow: auto;
   border: 1px solid rgba(227, 225, 219, 0.96);
@@ -1186,7 +1235,7 @@ input::placeholder {
   justify-content: space-between;
   border-bottom: 1px solid var(--border);
   background: linear-gradient(180deg, #ffffff, #fbfaf7);
-  padding: 22px 24px 18px;
+  padding: 26px 30px 22px;
 }
 
 .ui-dialog-head h2 {
@@ -1214,7 +1263,7 @@ input::placeholder {
 }
 
 .ui-dialog-body {
-  padding: 20px 24px 24px;
+  padding: 24px 30px 28px;
 }
 
 .sensitive-input,
@@ -1783,6 +1832,12 @@ html.dark .ui-select-trigger {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
+html.dark .model-fixed-provider {
+  border-color: rgba(87, 83, 78, 0.86);
+  background: rgba(24, 23, 21, 0.72);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
 html.dark .title-input:hover,
 html.dark .compact-input:hover,
 html.dark .ui-select-trigger:hover:not(:disabled),
@@ -2045,11 +2100,22 @@ html.dark input::placeholder {
 
   .model-grid,
   .model-field-row,
+  .model-settings-footer,
   .source-stats,
   .conversion-stats,
   .metrics-grid,
   .draft-list {
     grid-template-columns: 1fr;
+  }
+
+  .model-settings-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .model-settings-actions,
+  .model-settings-save-button {
+    width: 100%;
   }
 
   .ui-dialog-backdrop {

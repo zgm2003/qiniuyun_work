@@ -11,11 +11,11 @@ npm run dev
 
 ## 演示主线
 
-1. 展示首页和多路由导航，说明产品界面只面向真实 OpenAI-compatible provider。
+1. 展示首页和多路由导航，说明产品界面只面向真实 OpenAI-compatible 能力。
 2. 点击“导入文本”，选择 `samples/novel-3chapters.txt`；如果现场不方便选文件，可以点击“加载样例”恢复同一类输入。
 3. 指出标题由文件名生成，且“章节大纲预览”识别出 3 个章节，显示每章标题、字数和正文预览。
-4. 展示“模型配置”面板：Provider 为 OpenAI-compatible，不再暴露测试用 provider。
-5. 本地开发录屏可填写 base URL、model、temperature 和一次性 API Key；生产录屏使用服务端 AI 配置，不展示也不填写浏览器侧 API Key/Base URL/model。
+4. 展示“模型配置”面板：只维护一套 OpenAI-compatible AI 配置，不做供应商或模型列表选择。
+5. 本地开发录屏可填写 base URL、model、temperature 和 API Key；生产录屏使用服务端 AI 配置，不展示也不填写浏览器侧 API Key/Base URL/model。
 6. 点击“转换为 YAML 剧本”。
 7. 切到“剧本审查”，展示 YAML 包含 `metadata`、`characters`、`scenes`、`summary`。
 8. 展示“剧本质量清单”：Schema、元信息、角色、场景、台词、引用、总结全部通过。
@@ -38,8 +38,8 @@ npm run dev
 - 剧本质量清单是结构交付检查，不是 AI 主观剧情评分。
 - 少于 3 个章节会直接拒绝，不生成假结果。
 - 缺字段不使用空字符串兜底，避免掩盖 AI 输出错误。
-- 产品界面只暴露真实 OpenAI-compatible provider；确定性转换器只保留给测试、CI 和样例输出。
-- 模型配置是单次请求配置，API Key 不保存到仓库，也不写入 localStorage。
+- 产品界面只暴露真实 OpenAI-compatible 能力；确定性转换器只保留给测试、CI 和样例输出。
+- 模型配置是唯一 AI 配置，API Key 加密入库；不保存到仓库，也不写入 localStorage。
 - 本地草稿保存的是作品状态，不保存 API Key、Base URL、model、provider 或 temperature。
 
 ## 失败演示

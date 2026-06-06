@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { getMysqlPool, type MysqlQueryRunner } from "@/lib/db/mysql";
 import { DEFAULT_OPENAI_BASE_URL, listOpenAICompatibleModels, normalizeOpenAIBaseUrl, type FetchImplementation } from "@/lib/openai-compatible";
@@ -10,14 +9,10 @@ export type AIProviderHealthStatus = "unknown" | "healthy" | "unhealthy";
 export type AIProviderEnvironment = SecretEnvironment;
 
 export type SaveAIProviderSettingsInput = {
-  id?: string;
-  name: string;
   driver?: AIProviderDriver;
   baseUrl: string;
   apiKey: string;
-  defaultModel?: string;
-  status?: AIProviderStatus;
-  isDefault?: boolean;
+  model: string;
 };
 
 export type AIProviderSettingsView = {
@@ -31,13 +26,12 @@ export type AIProviderSettingsView = {
   healthMessage: string | null;
   lastHealthCheckedAt: string | null;
   hasApiKey: boolean;
+  defaultModel: string;
   createdAt: string;
   updatedAt: string;
 };
 
-export type DefaultAIProviderSettingsView = AIProviderSettingsView & {
-  defaultModel: string;
-};
+export type DefaultAIProviderSettingsView = AIProviderSettingsView;
 
 export type RuntimeAIProviderConfig = {
   provider: "openai-compatible";
@@ -51,17 +45,14 @@ export type AIProviderHealthResult = {
   healthMessage: string | null;
 };
 
-type AIProviderRow = RowDataPacket & {
+type AISettingsRow = RowDataPacket & {
   id: string;
-  name: string;
-  driver: AIProviderDriver;
   base_url: string;
+  model: string;
   api_key_ciphertext: string;
   api_key_iv: string;
   api_key_auth_tag: string;
   api_key_version: number;
-  status: AIProviderStatus;
-  is_default: 0 | 1 | boolean;
   health_status: AIProviderHealthStatus;
   health_message: string | null;
   last_health_checked_at: Date | null;
@@ -69,21 +60,8 @@ type AIProviderRow = RowDataPacket & {
   updated_at: Date;
 };
 
-type RuntimeAIProviderRow = RowDataPacket & {
-  driver: AIProviderDriver;
-  base_url: string;
-  api_key_ciphertext: string;
-  api_key_iv: string;
-  api_key_auth_tag: string;
-  api_key_version: number;
-  model_id: string;
-};
-
-type ModelFlagRow = RowDataPacket & {
-  model_id: string;
-  is_default: 0 | 1 | boolean;
-};
-
+const AI_SETTINGS_ID = "default";
+const AI_SETTINGS_NAME = "OpenAI Compatible";
 const DEFAULT_MODEL = "gpt-5.5";
 const HEALTH_MESSAGE_LIMIT = 500;
 
@@ -91,8 +69,8 @@ function resolveRunner(runner?: MysqlQueryRunner): MysqlQueryRunner {
   return runner ?? getMysqlPool();
 }
 
-function requireTrimmed(value: string, message: string): string {
-  const trimmed = value.trim();
+function requireTrimmed(value: string | undefined, message: string): string {
+  const trimmed = value?.trim();
   if (!trimmed) {
     throw new Error(message);
   }
@@ -100,26 +78,19 @@ function requireTrimmed(value: string, message: string): string {
   return trimmed;
 }
 
-function boolToTinyInt(value: boolean): 0 | 1 {
-  return value ? 1 : 0;
-}
-
-function rowFlag(value: 0 | 1 | boolean): boolean {
-  return value === true || value === 1;
-}
-
-function mapProviderRow(row: AIProviderRow): AIProviderSettingsView {
+function mapSettingsRow(row: AISettingsRow): DefaultAIProviderSettingsView {
   return {
     id: row.id,
-    name: row.name,
-    driver: row.driver,
+    name: AI_SETTINGS_NAME,
+    driver: "openai-compatible",
     baseUrl: row.base_url,
-    status: row.status,
-    isDefault: rowFlag(row.is_default),
+    status: "enabled",
+    isDefault: true,
     healthStatus: row.health_status,
     healthMessage: row.health_message,
     lastHealthCheckedAt: row.last_health_checked_at ? row.last_health_checked_at.toISOString() : null,
     hasApiKey: Boolean(row.api_key_ciphertext),
+    defaultModel: row.model,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString()
   };
@@ -153,178 +124,96 @@ function resolveEnvRuntimeConfig(env: AIProviderEnvironment = process.env): Runt
   };
 }
 
-async function getProviderSecret(providerId: string, runner: MysqlQueryRunner): Promise<AIProviderRow> {
-  const [rows] = await runner.query<AIProviderRow[]>(
-    `SELECT id, name, driver, base_url, api_key_ciphertext, api_key_iv, api_key_auth_tag, api_key_version,
-            status, is_default, health_status, health_message, last_health_checked_at, created_at, updated_at
-     FROM ai_providers
+async function getSettingsSecret(settingId: string, runner: MysqlQueryRunner): Promise<AISettingsRow> {
+  const [rows] = await runner.query<AISettingsRow[]>(
+    `SELECT id, base_url, model, api_key_ciphertext, api_key_iv, api_key_auth_tag, api_key_version,
+            health_status, health_message, last_health_checked_at, created_at, updated_at
+     FROM ai_settings
      WHERE id = ?
      LIMIT 1`,
-    [requireTrimmed(providerId, "providerId 不能为空")]
+    [requireTrimmed(settingId, "AI 配置 id 不能为空")]
   );
   if (!rows[0]) {
-    throw new Error("AI provider 不存在");
+    throw new Error("AI 配置不存在");
   }
 
   return rows[0];
-}
-
-async function saveDefaultProviderModel(providerId: string, model: string, runner: MysqlQueryRunner): Promise<void> {
-  const modelId = requireTrimmed(model, "默认模型不能为空");
-  const now = new Date();
-
-  await runner.query<ResultSetHeader>(
-    `UPDATE ai_provider_models
-     SET is_default = 0, updated_at = ?
-     WHERE provider_id = ?`,
-    [now, providerId]
-  );
-  await runner.query<ResultSetHeader>(
-    `INSERT INTO ai_provider_models (
-       id, provider_id, model_id, display_name, enabled, is_default, last_seen_at, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       display_name = VALUES(display_name),
-       enabled = VALUES(enabled),
-       is_default = VALUES(is_default),
-       updated_at = VALUES(updated_at)`,
-    [randomUUID(), providerId, modelId, modelId, 1, 1, now, now, now]
-  );
 }
 
 export async function saveAIProviderSettings(
   input: SaveAIProviderSettingsInput,
   runner?: MysqlQueryRunner,
   env?: AIProviderEnvironment
-): Promise<AIProviderSettingsView> {
-  const db = resolveRunner(runner);
-  const id = input.id ?? randomUUID();
-  const name = requireTrimmed(input.name, "供应商名称不能为空");
-  const driver = input.driver ?? "openai-compatible";
-  if (driver !== "openai-compatible") {
-    throw new Error(`不支持的 AI provider driver：${driver}`);
+): Promise<DefaultAIProviderSettingsView> {
+  if (input.driver && input.driver !== "openai-compatible") {
+    throw new Error(`不支持的 AI provider driver：${input.driver}`);
   }
+
+  const db = resolveRunner(runner);
   const baseUrl = normalizeOpenAIBaseUrl(requireTrimmed(input.baseUrl, "Base URL 不能为空"));
+  const model = requireTrimmed(input.model, "默认模型不能为空");
   const encrypted = encryptSecret(input.apiKey, env);
-  const status = input.status ?? "enabled";
-  const isDefault = input.isDefault ?? false;
   const now = new Date();
 
-  if (isDefault) {
-    await db.query<ResultSetHeader>(`UPDATE ai_providers SET is_default = 0 WHERE is_default = 1`);
-  }
-
-  if (input.id) {
-    await db.query<ResultSetHeader>(
-      `UPDATE ai_providers
-       SET name = ?, driver = ?, base_url = ?, api_key_ciphertext = ?, api_key_iv = ?, api_key_auth_tag = ?,
-           api_key_version = ?, status = ?, is_default = ?, updated_at = ?
-       WHERE id = ?`,
-      [
-        name,
-        driver,
-        baseUrl,
-        encrypted.ciphertext,
-        encrypted.iv,
-        encrypted.authTag,
-        encrypted.version,
-        status,
-        boolToTinyInt(isDefault),
-        now,
-        id
-      ]
-    );
-  } else {
-    await db.query<ResultSetHeader>(
-      `INSERT INTO ai_providers (
-         id, name, driver, base_url, api_key_ciphertext, api_key_iv, api_key_auth_tag, api_key_version,
-         status, is_default, health_status, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        name,
-        driver,
-        baseUrl,
-        encrypted.ciphertext,
-        encrypted.iv,
-        encrypted.authTag,
-        encrypted.version,
-        status,
-        boolToTinyInt(isDefault),
-        "unknown",
-        now,
-        now
-      ]
-    );
-  }
-
-  if (input.defaultModel !== undefined) {
-    await saveDefaultProviderModel(id, input.defaultModel, db);
-  }
-
-  const provider = await getAIProviderSettings(id, db);
-  if (!provider) {
-    throw new Error("AI provider 保存失败");
-  }
-
-  return provider;
-}
-
-export async function listAIProviderSettings(runner?: MysqlQueryRunner): Promise<AIProviderSettingsView[]> {
-  const [rows] = await resolveRunner(runner).query<AIProviderRow[]>(
-    `SELECT id, name, driver, base_url, api_key_ciphertext, api_key_iv, api_key_auth_tag, api_key_version,
-            status, is_default, health_status, health_message, last_health_checked_at, created_at, updated_at
-     FROM ai_providers
-     ORDER BY is_default DESC, updated_at DESC`
+  await db.query<ResultSetHeader>(
+    `INSERT INTO ai_settings (
+       id, base_url, model, api_key_ciphertext, api_key_iv, api_key_auth_tag, api_key_version,
+       health_status, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       base_url = VALUES(base_url),
+       model = VALUES(model),
+       api_key_ciphertext = VALUES(api_key_ciphertext),
+       api_key_iv = VALUES(api_key_iv),
+       api_key_auth_tag = VALUES(api_key_auth_tag),
+       api_key_version = VALUES(api_key_version),
+       health_status = 'unknown',
+       health_message = NULL,
+       last_health_checked_at = NULL,
+       updated_at = VALUES(updated_at)`,
+    [AI_SETTINGS_ID, baseUrl, model, encrypted.ciphertext, encrypted.iv, encrypted.authTag, encrypted.version, "unknown", now, now]
   );
 
-  return rows.map(mapProviderRow);
+  const settings = await getDefaultAIProviderSettings(db);
+  if (!settings) {
+    throw new Error("AI 配置保存失败");
+  }
+
+  return settings;
+}
+
+export async function listAIProviderSettings(runner?: MysqlQueryRunner): Promise<DefaultAIProviderSettingsView[]> {
+  const [rows] = await resolveRunner(runner).query<AISettingsRow[]>(
+    `SELECT id, base_url, model, api_key_ciphertext, api_key_iv, api_key_auth_tag, api_key_version,
+            health_status, health_message, last_health_checked_at, created_at, updated_at
+     FROM ai_settings
+     ORDER BY updated_at DESC
+     LIMIT 1`
+  );
+
+  return rows.map(mapSettingsRow);
 }
 
 export async function getAIProviderSettings(
   providerId: string,
   runner?: MysqlQueryRunner
-): Promise<AIProviderSettingsView | null> {
-  const [rows] = await resolveRunner(runner).query<AIProviderRow[]>(
-    `SELECT id, name, driver, base_url, api_key_ciphertext, api_key_iv, api_key_auth_tag, api_key_version,
-            status, is_default, health_status, health_message, last_health_checked_at, created_at, updated_at
-     FROM ai_providers
+): Promise<DefaultAIProviderSettingsView | null> {
+  const [rows] = await resolveRunner(runner).query<AISettingsRow[]>(
+    `SELECT id, base_url, model, api_key_ciphertext, api_key_iv, api_key_auth_tag, api_key_version,
+            health_status, health_message, last_health_checked_at, created_at, updated_at
+     FROM ai_settings
      WHERE id = ?
      LIMIT 1`,
-    [requireTrimmed(providerId, "providerId 不能为空")]
+    [requireTrimmed(providerId, "AI 配置 id 不能为空")]
   );
 
-  return rows[0] ? mapProviderRow(rows[0]) : null;
+  return rows[0] ? mapSettingsRow(rows[0]) : null;
 }
-
 
 export async function getDefaultAIProviderSettings(
   runner?: MysqlQueryRunner
 ): Promise<DefaultAIProviderSettingsView | null> {
-  const [rows] = await resolveRunner(runner).query<Array<AIProviderRow & { default_model: string }>>(
-    `SELECT providers.id, providers.name, providers.driver, providers.base_url,
-            providers.api_key_ciphertext, providers.api_key_iv, providers.api_key_auth_tag, providers.api_key_version,
-            providers.status, providers.is_default, providers.health_status, providers.health_message,
-            providers.last_health_checked_at, providers.created_at, providers.updated_at,
-            models.model_id AS default_model
-     FROM ai_providers providers
-     INNER JOIN ai_provider_models models ON models.provider_id = providers.id
-     WHERE providers.status = 'enabled'
-       AND providers.is_default = 1
-       AND models.enabled = 1
-       AND models.is_default = 1
-     ORDER BY providers.updated_at DESC, models.updated_at DESC
-     LIMIT 1`
-  );
-  const row = rows[0];
-  if (!row) {
-    return null;
-  }
-
-  return {
-    ...mapProviderRow(row),
-    defaultModel: row.default_model
-  };
+  return getAIProviderSettings(AI_SETTINGS_ID, runner);
 }
 
 export async function resolveRuntimeAIProviderConfig(
@@ -332,75 +221,20 @@ export async function resolveRuntimeAIProviderConfig(
   env?: AIProviderEnvironment
 ): Promise<RuntimeAIProviderConfig> {
   try {
-    const [rows] = await resolveRunner(runner).query<RuntimeAIProviderRow[]>(
-      `SELECT providers.driver, providers.base_url, providers.api_key_ciphertext, providers.api_key_iv,
-              providers.api_key_auth_tag, providers.api_key_version, models.model_id
-       FROM ai_providers providers
-       INNER JOIN ai_provider_models models ON models.provider_id = providers.id
-       WHERE providers.status = 'enabled'
-         AND providers.is_default = 1
-         AND models.enabled = 1
-         AND models.is_default = 1
-       ORDER BY providers.updated_at DESC, models.updated_at DESC
-       LIMIT 1`
-    );
-    const row = rows[0];
-    if (row) {
-      return {
-        provider: row.driver,
-        apiKey: decryptSecret(secretFromRow(row), env),
-        baseUrl: normalizeOpenAIBaseUrl(row.base_url),
-        model: row.model_id
-      };
-    }
+    const row = await getSettingsSecret(AI_SETTINGS_ID, resolveRunner(runner));
+    return {
+      provider: "openai-compatible",
+      apiKey: decryptSecret(secretFromRow(row), env),
+      baseUrl: normalizeOpenAIBaseUrl(row.base_url),
+      model: row.model
+    };
   } catch {
     return resolveEnvRuntimeConfig(env);
   }
-
-  return resolveEnvRuntimeConfig(env);
-}
-
-export async function refreshAIProviderModels(
-  providerId: string,
-  fetchImpl: FetchImplementation = fetch,
-  runner?: MysqlQueryRunner,
-  env?: AIProviderEnvironment
-): Promise<string[]> {
-  const db = resolveRunner(runner);
-  const provider = await getProviderSecret(providerId, db);
-  const apiKey = decryptSecret(secretFromRow(provider), env);
-  const modelIds = await listOpenAICompatibleModels({ apiKey, baseUrl: provider.base_url }, fetchImpl);
-  const [existingRows] = await db.query<ModelFlagRow[]>(
-    `SELECT model_id, is_default
-     FROM ai_provider_models
-     WHERE provider_id = ?`,
-    [provider.id]
-  );
-  let hasDefault = existingRows.some((row) => rowFlag(row.is_default));
-  const now = new Date();
-
-  for (const [index, modelId] of modelIds.entries()) {
-    const isDefault = !hasDefault && index === 0;
-    if (isDefault) {
-      hasDefault = true;
-    }
-    await db.query<ResultSetHeader>(
-      `INSERT INTO ai_provider_models (
-         id, provider_id, model_id, display_name, enabled, is_default, last_seen_at, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-         display_name = VALUES(display_name),
-         last_seen_at = VALUES(last_seen_at),
-         updated_at = VALUES(updated_at)`,
-      [randomUUID(), provider.id, modelId, modelId, 1, boolToTinyInt(isDefault), now, now, now]
-    );
-  }
-
-  return modelIds;
 }
 
 function healthMessageFromError(error: unknown): string {
-  const raw = error instanceof Error ? error.message : "AI provider 健康检查失败";
+  const raw = error instanceof Error ? error.message : "AI 配置健康检查失败";
   const firstSentence = raw.split("。")[0];
   return firstSentence.slice(0, HEALTH_MESSAGE_LIMIT);
 }
@@ -413,23 +247,26 @@ export async function checkAIProviderHealth(
 ): Promise<AIProviderHealthResult> {
   const db = resolveRunner(runner);
   const checkedAt = new Date();
+  const settingId = requireTrimmed(providerId, "AI 配置 id 不能为空");
 
   try {
-    await refreshAIProviderModels(providerId, fetchImpl, db, env);
+    const settings = await getSettingsSecret(settingId, db);
+    const apiKey = decryptSecret(secretFromRow(settings), env);
+    await listOpenAICompatibleModels({ apiKey, baseUrl: settings.base_url }, fetchImpl);
     await db.query<ResultSetHeader>(
-      `UPDATE ai_providers
+      `UPDATE ai_settings
        SET health_status = ?, health_message = ?, last_health_checked_at = ?
        WHERE id = ?`,
-      ["healthy", null, checkedAt, requireTrimmed(providerId, "providerId 不能为空")]
+      ["healthy", null, checkedAt, settingId]
     );
     return { healthStatus: "healthy", healthMessage: null };
   } catch (error) {
     const message = healthMessageFromError(error);
     await db.query<ResultSetHeader>(
-      `UPDATE ai_providers
+      `UPDATE ai_settings
        SET health_status = ?, health_message = ?, last_health_checked_at = ?
        WHERE id = ?`,
-      ["unhealthy", message, checkedAt, requireTrimmed(providerId, "providerId 不能为空")]
+      ["unhealthy", message, checkedAt, settingId]
     );
     return { healthStatus: "unhealthy", healthMessage: message };
   }

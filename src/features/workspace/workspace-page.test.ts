@@ -81,18 +81,22 @@ describe("WorkspacePage model configuration", () => {
     expect(markup).not.toContain("API Key（仅本次请求）");
     expect(markup).toContain("已保存的 API Key 不会回显");
     expect(markup).toContain(">Base URL<");
-    expect(markup).toContain("获取模型");
-    expect(markup).toContain("保存到数据库");
+    expect(markup).not.toContain("获取模型");
+    expect(markup).not.toContain("Provider");
+    expect(markup).toContain("保存唯一配置");
+    expect(markup).toContain('class="model-settings-footer"');
+    expect(markup.indexOf('class="model-settings-footer"')).toBeLessThan(markup.indexOf("保存唯一配置"));
   });
 
   test("opens production settings as a server-config explanation without browser credentials", () => {
     const markup = renderWithWorkspaceProvider("production", createElement(ModelSettingsDialog, { defaultOpen: true }));
 
     expect(markup).toContain('role="dialog"');
-    expect(markup).toContain("使用服务端 AI 配置");
+    expect(markup).toContain("使用服务端唯一 AI 配置");
     expect(markup).not.toContain("API Key（仅本次请求）");
     expect(markup).not.toContain(">Base URL<");
     expect(markup).not.toContain("获取模型");
+    expect(markup).not.toContain("Provider");
   });
 });
 

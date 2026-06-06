@@ -1,10 +1,6 @@
-import type { ProductProviderName } from "./provider-options";
-
 type FetchImplementation = typeof fetch;
 
 export type SaveProviderSettingsInput = {
-  provider: ProductProviderName;
-  name: string;
   baseUrl: string;
   apiKey: string;
   model: string;
@@ -13,12 +9,11 @@ export type SaveProviderSettingsInput = {
 export type SavedProvider = {
   id: string;
   hasApiKey: boolean;
+  model?: string;
 };
 
 export type LoadedProviderSettings = {
   id: string;
-  provider: ProductProviderName;
-  name: string;
   baseUrl: string;
   model: string;
   hasApiKey: boolean;
@@ -29,7 +24,7 @@ type ProviderSettingsSuccess = {
 };
 
 type LoadProviderSettingsSuccess = {
-  provider: LoadedProviderSettings | null;
+  provider: (LoadedProviderSettings & { provider?: "openai-compatible" }) | null;
 };
 
 type ProviderSettingsFailure = {
@@ -47,10 +42,19 @@ export async function loadProviderSettings(fetchImpl: FetchImplementation = fetc
   const body = (await response.json()) as LoadProviderSettingsSuccess | ProviderSettingsFailure;
 
   if (!response.ok || isProviderSettingsFailure(body)) {
-    throw new Error(isProviderSettingsFailure(body) ? body.error : "AI provider 读取失败");
+    throw new Error(isProviderSettingsFailure(body) ? body.error : "AI 配置读取失败");
   }
 
-  return body.provider;
+  if (!body.provider) {
+    return null;
+  }
+
+  return {
+    id: body.provider.id,
+    baseUrl: body.provider.baseUrl,
+    model: body.provider.model,
+    hasApiKey: body.provider.hasApiKey
+  };
 }
 
 export async function saveProviderSettings(
@@ -65,8 +69,12 @@ export async function saveProviderSettings(
   const body = (await response.json()) as ProviderSettingsSuccess | ProviderSettingsFailure;
 
   if (!response.ok || isProviderSettingsFailure(body)) {
-    throw new Error(isProviderSettingsFailure(body) ? body.error : "AI provider 保存失败");
+    throw new Error(isProviderSettingsFailure(body) ? body.error : "AI 配置保存失败");
   }
 
-  return body.provider;
+  return {
+    id: body.provider.id,
+    hasApiKey: body.provider.hasApiKey,
+    model: body.provider.model
+  };
 }

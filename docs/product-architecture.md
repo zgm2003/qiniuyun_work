@@ -21,7 +21,7 @@
 ↓
 创建 / 导入小说项目
 ↓
-选择可用 AI 供应商和 Prompt 模板
+维护唯一 AI 配置和 Prompt 模板
 ↓
 生成结构化 YAML 剧本
 ↓
@@ -33,8 +33,8 @@
 平台配置负责：
 
 ```text
-AI 供应商配置
-模型列表和健康检查
+唯一 AI 配置
+健康检查
 Prompt 模板管理
 调用日志
 生成失败排查
@@ -87,39 +87,25 @@ script_versions
 
 第一版保留完整 YAML 版本，不急着把每个 scene 拆成多张表。YAML 是当前产品的稳定协议，先不要破坏。
 
-### AI 供应商
+### AI 配置
 
 ```text
-ai_providers
-- id
-- name
-- driver
+ai_settings
+- id = default
 - base_url
+- model
 - api_key_ciphertext
 - api_key_iv
 - api_key_auth_tag
 - api_key_version
-- status
-- is_default
 - health_status
 - health_message
 - last_health_checked_at
 - created_at
 - updated_at
-
-ai_provider_models
-- id
-- provider_id
-- model_id
-- display_name
-- enabled
-- is_default
-- last_seen_at
-- created_at
-- updated_at
 ```
 
-API Key 必须按敏感数据处理。明文 key 不能入库，不能返回浏览器端。
+当前产品只设置一次，不做多供应商、多模型选择。API Key 必须按敏感数据处理。明文 key 不能入库，不能返回浏览器端。
 
 ### Prompt 模板
 
@@ -159,7 +145,7 @@ MySQL 存放长期状态：
 
 - 项目
 - 剧本版本
-- AI 供应商
+- 唯一 AI 配置
 - Prompt 模板
 - 调用记录
 
@@ -167,18 +153,18 @@ Redis 只在出现真实短期状态需求时再引入：
 
 - 转换任务状态
 - 限流计数
-- 短期模型健康检查结果
+- 短期 AI 健康检查结果
 
 不要把项目正文、剧本 YAML 这类长期资产塞进 Redis。
 
-## AI provider 策略
+## AI 调用策略
 
-产品路径只使用真实 AI provider。
+产品路径只使用真实 OpenAI-compatible 调用能力。
 
 但是测试层可以保留 mock：
 
 - `mock` 用于单元测试、离线演示、CI。
-- 产品界面默认不暴露 mock。
+- 产品界面默认不暴露 mock，也不提供供应商下拉。
 - API 层可以通过环境变量或测试注入使用 mock，但不能让生产使用者误以为 mock 是真实生成。
 
 这样不破坏当前比赛演示，也不把 mock 当产品能力卖。
@@ -217,7 +203,7 @@ YAML 校验
 2. `style: restyle workspace shell`
 3. `feat: add database foundation`
 4. `feat: add prompt template management`
-5. `feat: add AI provider settings`
+5. `feat: add singleton AI settings`
 6. `chore: remove account concepts`
 
 每个 PR 合并后主分支都必须可运行。

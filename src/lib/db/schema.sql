@@ -45,37 +45,18 @@ CREATE TABLE IF NOT EXISTS prompt_templates (
   KEY idx_prompt_templates_lookup (template_key, enabled, updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS ai_providers (
-  id VARCHAR(36) NOT NULL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  driver ENUM('openai-compatible') NOT NULL,
+CREATE TABLE IF NOT EXISTS ai_settings (
+  id VARCHAR(32) NOT NULL PRIMARY KEY,
   base_url VARCHAR(512) NOT NULL,
+  model VARCHAR(255) NOT NULL,
   api_key_ciphertext TEXT NOT NULL,
   api_key_iv CHAR(24) NOT NULL,
   api_key_auth_tag CHAR(24) NOT NULL,
   api_key_version INT NOT NULL DEFAULT 1,
-  status ENUM('enabled', 'disabled') NOT NULL DEFAULT 'enabled',
-  is_default TINYINT(1) NOT NULL DEFAULT 0,
   health_status ENUM('unknown', 'healthy', 'unhealthy') NOT NULL DEFAULT 'unknown',
   health_message VARCHAR(500) NULL,
   last_health_checked_at DATETIME(3) NULL,
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-  KEY idx_ai_providers_runtime (status, is_default, updated_at),
-  KEY idx_ai_providers_driver (driver)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS ai_provider_models (
-  id VARCHAR(36) NOT NULL PRIMARY KEY,
-  provider_id VARCHAR(36) NOT NULL,
-  model_id VARCHAR(255) NOT NULL,
-  display_name VARCHAR(255) NOT NULL,
-  enabled TINYINT(1) NOT NULL DEFAULT 1,
-  is_default TINYINT(1) NOT NULL DEFAULT 0,
-  last_seen_at DATETIME(3) NULL,
-  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-  UNIQUE KEY uk_ai_provider_models_provider_model (provider_id, model_id),
-  KEY idx_ai_provider_models_runtime (provider_id, enabled, is_default, updated_at),
-  CONSTRAINT fk_ai_provider_models_provider FOREIGN KEY (provider_id) REFERENCES ai_providers(id) ON DELETE CASCADE
+  KEY idx_ai_settings_updated_at (updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

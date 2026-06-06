@@ -38,27 +38,24 @@ describe("database schema", () => {
     expect(schema).toContain("KEY idx_prompt_templates_lookup (template_key, enabled, updated_at)");
   });
 
-  it("defines AI provider settings with encrypted API key fields", () => {
-    expect(schema).toContain("CREATE TABLE IF NOT EXISTS ai_providers");
-    expect(schema).toContain("driver ENUM('openai-compatible') NOT NULL");
+  it("stores the single AI runtime setting in one table", () => {
+    expect(schema).toContain("CREATE TABLE IF NOT EXISTS ai_settings");
+    expect(schema).toContain("id VARCHAR(32) NOT NULL PRIMARY KEY");
     expect(schema).toContain("base_url VARCHAR(512) NOT NULL");
+    expect(schema).toContain("model VARCHAR(255) NOT NULL");
     expect(schema).toContain("api_key_ciphertext TEXT NOT NULL");
     expect(schema).toContain("api_key_iv CHAR(24) NOT NULL");
     expect(schema).toContain("api_key_auth_tag CHAR(24) NOT NULL");
     expect(schema).toContain("api_key_version INT NOT NULL DEFAULT 1");
-    expect(schema).toContain("KEY idx_ai_providers_runtime (status, is_default, updated_at)");
+    expect(schema).toContain("health_status ENUM('unknown', 'healthy', 'unhealthy') NOT NULL DEFAULT 'unknown'");
+    expect(schema).toContain("KEY idx_ai_settings_updated_at (updated_at)");
   });
 
-  it("defines AI provider models with provider ownership and runtime lookup index", () => {
-    expect(schema).toContain("CREATE TABLE IF NOT EXISTS ai_provider_models");
-    expect(schema).toContain("provider_id VARCHAR(36) NOT NULL");
-    expect(schema).toContain("model_id VARCHAR(255) NOT NULL");
-    expect(schema).toContain("enabled TINYINT(1) NOT NULL DEFAULT 1");
-    expect(schema).toContain("is_default TINYINT(1) NOT NULL DEFAULT 0");
-    expect(schema).toContain("UNIQUE KEY uk_ai_provider_models_provider_model (provider_id, model_id)");
-    expect(schema).toContain("KEY idx_ai_provider_models_runtime (provider_id, enabled, is_default, updated_at)");
-    expect(schema).toContain(
-      "CONSTRAINT fk_ai_provider_models_provider FOREIGN KEY (provider_id) REFERENCES ai_providers(id) ON DELETE CASCADE"
-    );
+  it("does not split fixed AI configuration into provider and model tables", () => {
+    expect(schema).not.toContain("CREATE TABLE IF NOT EXISTS ai_providers");
+    expect(schema).not.toContain("CREATE TABLE IF NOT EXISTS ai_provider_models");
+    expect(schema).not.toContain("provider_id VARCHAR(36) NOT NULL");
+    expect(schema).not.toContain("is_default TINYINT(1) NOT NULL");
+    expect(schema).not.toContain("uk_ai_provider_models_provider_model");
   });
 });

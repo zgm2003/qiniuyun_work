@@ -46,7 +46,7 @@ npm run build
 | 2 | style | restyle workspace shell | 参考中性 SaaS / 管理台风格重做工作台外观，不改业务行为。 |
 | 3 | feat | database foundation | 后续 PR 接入最小 MySQL 持久化；Redis 仅在异步/限流需求出现时再单独评估。 |
 | 4 | feat | prompt template management | P4：将硬编码提示词迁移为固定变量模板，输出仍受 YAML Schema 约束。 |
-| 5 | feat | encrypted AI provider settings | P5：AI 供应商、模型、健康检查入库，API Key 使用 AES-256-GCM 加密。 |
+| 5 | feat | encrypted AI settings | P5：唯一 AI 配置、健康检查入库，API Key 使用 AES-256-GCM 加密。 |
 
 ## 产品化阶段已推进
 
@@ -59,9 +59,9 @@ npm run build
 
 ## 下一阶段计划
 
-### 下一步：AI 供应商配置加密入库
+### 下一步：唯一 AI 配置加密入库
 
-目标：AI Base URL、模型和 Key 入库；Key 使用 AES-256-GCM 加密，主密钥只来自服务端 env，前端只显示 masked 状态。
+目标：AI Base URL、model 和 Key 入库；Key 使用 AES-256-GCM 加密，主密钥只来自服务端 env，前端只显示已保存状态。不做多供应商、多模型选择。
 
 
 ## 当前最终演示链路

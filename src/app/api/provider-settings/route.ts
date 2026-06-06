@@ -5,13 +5,12 @@ import { getDefaultAIProviderSettings, saveAIProviderSettings } from "@/lib/serv
 export const runtime = "nodejs";
 
 const ProviderSettingsRequestSchema = z.object({
-  provider: z.enum(["openai-compatible"]),
-  name: z.string().refine((value) => value.trim().length > 0, "供应商名称不能为空"),
   baseUrl: z.string().refine((value) => value.trim().length > 0, "Base URL 不能为空"),
   apiKey: z.string().refine((value) => value.trim().length > 0, "API Key 不能为空"),
-  model: z.string().refine((value) => value.trim().length > 0, "默认模型不能为空")
+  model: z.string().refine((value) => value.trim().length > 0, "默认模型不能为空"),
+  provider: z.enum(["openai-compatible"]).optional(),
+  name: z.string().optional()
 });
-
 
 function toProviderSettingsResponse(provider: Awaited<ReturnType<typeof getDefaultAIProviderSettings>>) {
   if (!provider) {
@@ -21,7 +20,6 @@ function toProviderSettingsResponse(provider: Awaited<ReturnType<typeof getDefau
   return {
     id: provider.id,
     provider: provider.driver,
-    name: provider.name,
     baseUrl: provider.baseUrl,
     model: provider.defaultModel,
     hasApiKey: provider.hasApiKey,
@@ -37,7 +35,7 @@ export async function GET() {
     const provider = await getDefaultAIProviderSettings();
     return NextResponse.json({ provider: toProviderSettingsResponse(provider) }, { status: 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "AI provider 读取失败";
+    const message = error instanceof Error ? error.message : "AI 配置读取失败";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -57,20 +55,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const existingDefaultProvider = await getDefaultAIProviderSettings();
     const provider = await saveAIProviderSettings({
-      id: existingDefaultProvider?.id,
-      name: parsed.data.name,
-      driver: parsed.data.provider,
       baseUrl: parsed.data.baseUrl,
       apiKey: parsed.data.apiKey,
-      defaultModel: parsed.data.model,
-      status: "enabled",
-      isDefault: true
+      model: parsed.data.model
     });
-    return NextResponse.json({ provider }, { status: 201 });
+    return NextResponse.json({ provider: toProviderSettingsResponse(provider) }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "AI provider 保存失败";
+    const message = error instanceof Error ? error.message : "AI 配置保存失败";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

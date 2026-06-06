@@ -10,7 +10,7 @@
 - 3 章以上输入校验。
 - 章节识别与章节大纲预览。
 - OpenAI-compatible 真实模型调用。
-- 开发/本地调试模型列表获取接口。
+- 开发/本地调试唯一 AI 配置。
 - YAML 剧本生成。
 - YAML Schema 校验。
 - 剧本质量清单。
@@ -233,42 +233,35 @@ Prompt 市场
 多租户模板继承
 ```
 
-### P5：AI 供应商配置加密入库
+### P5：唯一 AI 配置加密入库
 
-目标：平台统一管理 AI Key、Base URL、模型和健康状态。Key 必须加密后入库，前端永远不显示明文。
+目标：平台只保存一套 AI Key、Base URL、model 和健康状态。Key 必须加密后入库，前端永远不显示明文。
 
 建议表：
 
 ```text
-ai_providers
-- id
-- name
-- driver
+ai_settings
+- id = default
 - base_url
+- model
 - api_key_ciphertext
 - api_key_iv
 - api_key_auth_tag
 - api_key_version
-- status
 - health_status
+- health_message
+- last_health_checked_at
 - created_at
 - updated_at
-
-ai_provider_models
-- id
-- provider_id
-- model_id
-- display_name
-- enabled
 ```
 
 必须做：
 
 - API Key 使用 AES-256-GCM 加密后入库。
 - 主密钥只来自服务端 env，不入库，不返回前端。
-- 前端只显示 masked key 状态。
-- 受控平台配置入口可以刷新模型列表。
-- 工作台只使用已启用 provider 和 model。
+- 前端只显示已保存状态，不回显 Key。
+- 不做供应商下拉，不做模型列表选择。
+- 工作台只读取这一套配置。
 - 保留 `OPENAI_COMPATIBLE_*` env fallback，避免数据库配置异常时生产转换直接瘫痪。
 
 ### P6：Redis 与异步任务
@@ -280,7 +273,7 @@ ai_provider_models
 - 长小说转换超过 HTTP 可接受等待时间。
 - 需要任务进度。
 - 需要接口限流。
-- 需要短期模型健康状态缓存。
+- 需要短期 AI 健康状态缓存。
 
 Redis 不存：
 
@@ -312,7 +305,7 @@ src/features/workspace/workspace-context.tsx
 3. P2 完成后下一步应该做什么，为什么？
 ```
 
-正确答案应该是：P3 MySQL 基础持久化、P4 Prompt 模板化、P5 AI 供应商配置加密入库已完成；下一步按真实痛点做减法式增强，例如局部重写、质量评分或异步任务；Redis 继续后置。
+正确答案应该是：P3 MySQL 基础持久化、P4 Prompt 模板化、P5 唯一 AI 配置加密入库已完成；下一步按真实痛点做减法式增强，例如局部重写、质量评分或异步任务；Redis 继续后置。
 
 ## 当前不要做
 

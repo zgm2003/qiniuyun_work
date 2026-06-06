@@ -9,13 +9,12 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe("provider settings client", () => {
-  test("loads the default database provider settings without API key material", async () => {
+  test("loads the single database AI setting without API key material", async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse({
         provider: {
-          id: "provider-1",
+          id: "default",
           provider: "openai-compatible",
-          name: "OpenAI Compatible",
           baseUrl: "https://lingsuan.top/v1",
           model: "gpt-5.5",
           hasApiKey: true
@@ -24,9 +23,7 @@ describe("provider settings client", () => {
     );
 
     await expect(loadProviderSettings(fetchImpl)).resolves.toEqual({
-      id: "provider-1",
-      provider: "openai-compatible",
-      name: "OpenAI Compatible",
+      id: "default",
       baseUrl: "https://lingsuan.top/v1",
       model: "gpt-5.5",
       hasApiKey: true
@@ -34,13 +31,11 @@ describe("provider settings client", () => {
     expect(fetchImpl).toHaveBeenCalledWith("/api/provider-settings", { method: "GET" });
   });
 
-  test("posts provider settings to the database-backed API", async () => {
-    const fetchImpl = vi.fn(async () => jsonResponse({ provider: { id: "provider-1", hasApiKey: true } }, 201));
+  test("posts the one AI setting to the database-backed API", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ provider: { id: "default", hasApiKey: true, model: "gpt-5.4" } }, 201));
 
     const provider = await saveProviderSettings(
       {
-        provider: "openai-compatible",
-        name: "OpenAI Compatible",
         baseUrl: "https://api.openai.com/v1",
         apiKey: "sk-live-secret",
         model: "gpt-5.4"
@@ -48,13 +43,11 @@ describe("provider settings client", () => {
       fetchImpl
     );
 
-    expect(provider).toEqual({ id: "provider-1", hasApiKey: true });
+    expect(provider).toEqual({ id: "default", hasApiKey: true, model: "gpt-5.4" });
     expect(fetchImpl).toHaveBeenCalledWith("/api/provider-settings", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        provider: "openai-compatible",
-        name: "OpenAI Compatible",
         baseUrl: "https://api.openai.com/v1",
         apiKey: "sk-live-secret",
         model: "gpt-5.4"
@@ -68,8 +61,6 @@ describe("provider settings client", () => {
     await expect(
       saveProviderSettings(
         {
-          provider: "openai-compatible",
-          name: "OpenAI Compatible",
           baseUrl: "https://api.openai.com/v1",
           apiKey: "sk-live-secret",
           model: "gpt-5.4"
