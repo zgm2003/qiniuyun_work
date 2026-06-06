@@ -4,7 +4,11 @@ import { getActiveWorkbenchRoute, WORKBENCH_NAV_ITEMS } from "./workbench-nav";
 describe("workbench nav", () => {
   test("defines the product workbench routes in display order", () => {
     expect(WORKBENCH_NAV_ITEMS.map((item) => item.href)).toEqual(["/workspace", "/projects", "/script"]);
-    expect(WORKBENCH_NAV_ITEMS.find((item) => item.href === "/projects")?.description).toContain("MySQL");
+    expect(WORKBENCH_NAV_ITEMS.find((item) => item.href === "/projects")).toEqual({
+      href: "/projects",
+      label: "项目库",
+      description: "MySQL 保存的项目和 YAML 版本"
+    });
   });
 
   test("uses workspace as the default active route", () => {
@@ -15,5 +19,7 @@ describe("workbench nav", () => {
   test("matches nested paths to their route root", () => {
     expect(getActiveWorkbenchRoute("/script/review")).toBe("/script");
     expect(getActiveWorkbenchRoute("/projects/project-1")).toBe("/projects");
+    expect(getActiveWorkbenchRoute("/drafts/local-1")).toBe("/drafts");
+    expect(getActiveWorkbenchRoute("/report/latest")).toBe("/report");
   });
 });
