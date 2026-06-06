@@ -44,7 +44,7 @@ export function ReportPage() {
           <h2>
             {workspace.scriptQuality.passedCount}/{workspace.scriptQuality.items.length}
           </h2>
-          <p>质量清单通过项。失败项请回到“剧本审查”修正 YAML。</p>
+          <p>质量清单通过项。失败项请回到“编辑 YAML”修正 YAML。</p>
         </article>
       </div>
     </section>

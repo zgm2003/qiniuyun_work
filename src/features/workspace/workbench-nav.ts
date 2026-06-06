@@ -7,14 +7,13 @@ export type WorkbenchNavItem = {
 };
 
 export const WORKBENCH_NAV_ITEMS: WorkbenchNavItem[] = [
-  { href: "/workspace", label: "工作台", description: "小说输入、模型配置、章节大纲" },
-  { href: "/script", label: "剧本审查", description: "YAML 编辑、Schema 校验、质量清单" },
-  { href: "/projects", label: "服务端项目", description: "保存、加载小说改编项目草稿" },
-  { href: "/drafts", label: "项目草稿", description: "本地草稿保存、加载、删除" },
-  { href: "/report", label: "质量报告", description: "章节、角色、场景、台词总结" }
+  { href: "/workspace", label: "工作台", description: "小说输入、章节预览、一键生成" },
+  { href: "/script", label: "编辑 YAML", description: "Schema 校验、质量清单、导出" }
 ];
 
+const WORKBENCH_ROUTE_ROOTS: WorkbenchRoute[] = ["/workspace", "/script", "/projects", "/drafts", "/report"];
+
 export function getActiveWorkbenchRoute(pathname: string): WorkbenchRoute {
-  const matched = WORKBENCH_NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
-  return matched?.href ?? "/workspace";
+  const matched = WORKBENCH_ROUTE_ROOTS.find((href) => pathname === href || pathname.startsWith(`${href}/`));
+  return matched ?? "/workspace";
 }

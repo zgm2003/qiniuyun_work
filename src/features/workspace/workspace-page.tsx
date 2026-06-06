@@ -1,13 +1,27 @@
 "use client";
 
 import { type ChangeEvent, useRef } from "react";
-import { UiSelect } from "@/components/ui/select";
+import Link from "next/link";
+import { ModelSettingsDialog } from "./model-settings-dialog";
 import { useWorkspace } from "./workspace-context";
-import { PRODUCT_PROVIDER_OPTIONS } from "./provider-options";
 
 export function WorkspacePage() {
   const workspace = useWorkspace();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const sourceCharacterCount = workspace.novelText.replace(/\s/g, "").length;
+  const chapterCount = workspace.chapterOutline.chapterCount;
+  const minimumChapterText = `${workspace.chapterOutline.minimumChapters} 章`;
+  const hasGeneratedYaml = workspace.yamlText.trim().length > 0;
+  const conversionStatusText = hasGeneratedYaml
+    ? "已生成 YAML"
+    : workspace.chapterOutline.ready
+      ? "准备生成"
+      : `还差 ${workspace.chapterOutline.missingChapterCount} 章`;
+  const conversionButtonText = workspace.isPending
+    ? "正在生成 YAML..."
+    : workspace.canConvert
+      ? "生成 YAML 剧本"
+      : `至少需要 ${minimumChapterText}`;
 
   function openFileImport() {
     fileInputRef.current?.click();
@@ -31,19 +45,25 @@ export function WorkspacePage() {
   return (
     <section className="workbench-page" aria-label="小说转剧本工作台">
       <div className="workbench-page-head">
-        <div>
-          <p className="eyebrow">Source · Model · Outline</p>
-          <h1>工作台</h1>
-          <p className="lead">先把小说正文、模型配置和章节大纲整理好。生成结果会进入“剧本审查”页面继续校验和导出。</p>
+        <div className="workbench-hero-copy">
+          <p className="eyebrow">Novel · YAML · Script</p>
+          <h1>把小说变成 YAML 剧本</h1>
+          <p className="lead">导入 3 章以上小说正文，预览章节是否达标，然后一键生成可编辑、可校验、可导出的 YAML 剧本初稿。</p>
+          <div
+            className="mt-7 flex flex-wrap gap-2.5"
+            aria-label="使用步骤"
+          >
+            <StepPill index="01" label="导入小说" tone="dark" />
+            <StepPill index="02" label="检查章节" />
+            <StepPill index="03" label="生成 YAML" />
+          </div>
         </div>
-        <div className="hero-card" aria-label="当前模型配置">
-          <span>Provider</span>
-          <strong>{workspace.activeProviderText}</strong>
-          <small>{workspace.model}</small>
+        <div className="flex items-start justify-end">
+          <ModelSettingsDialog />
         </div>
       </div>
 
-      <div className="workspace-grid single-output" aria-label="小说输入与模型配置">
+      <div className="workspace-grid single-output" aria-label="小说输入与章节预览">
         <div className="panel input-panel">
           <div className="panel-head">
             <div>
@@ -67,6 +87,12 @@ export function WorkspacePage() {
             </div>
           </div>
 
+          <div className="source-stats" aria-label="小说状态">
+            <StatChip label="已识别" value={`${chapterCount} 章`} tone={workspace.chapterOutline.ready ? "ok" : "bad"} />
+            <StatChip label="最低要求" value={minimumChapterText} />
+            <StatChip label="正文" value={`${sourceCharacterCount} 字`} />
+          </div>
+
           <label className="field-label" htmlFor="title">
             标题
           </label>
@@ -77,103 +103,6 @@ export function WorkspacePage() {
             onChange={(event) => workspace.setTitle(event.target.value)}
             placeholder="请输入作品标题"
           />
-
-          <div id="model-config" className="model-config-card" aria-label="模型配置">
-            <div className="model-config-head">
-              <div>
-                <p className="section-kicker">Model Config</p>
-                <h3>模型配置</h3>
-              </div>
-              <span className="provider-pill live">
-                真实模型
-              </span>
-            </div>
-
-            <div className="model-grid">
-              <UiSelect
-                label="Provider"
-                value={workspace.provider}
-                options={PRODUCT_PROVIDER_OPTIONS}
-                onChange={workspace.setProvider}
-                disabled={workspace.isProductionRuntime}
-              />
-
-              <label>
-                <span>Temperature</span>
-                <input
-                  className="compact-input"
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={workspace.temperature}
-                  onChange={(event) => workspace.setTemperature(Number(event.target.value))}
-                />
-              </label>
-            </div>
-
-            {workspace.isProductionRuntime ? (
-              <div className="model-live-fields" aria-label="生产模型配置说明">
-                <p className="model-list-message">
-                  使用服务端 AI 配置。浏览器端不能查看或覆盖 API Key、Base URL 和 model；当前目标模型由服务端配置决定。
-                </p>
-              </div>
-            ) : (
-              <div className="model-live-fields">
-                <label>
-                  <span>Base URL</span>
-                  <input
-                    className="compact-input"
-                    value={workspace.baseUrl}
-                    onChange={(event) => workspace.setBaseUrl(event.target.value)}
-                    placeholder="https://api.openai.com/v1"
-                  />
-                </label>
-                <div className="model-field-row">
-                  <label className="model-field-main">
-                    <span>Model</span>
-                    {workspace.modelIds.length > 0 ? (
-                      <UiSelect
-                        hideLabel
-                        label="Model"
-                        value={workspace.model}
-                        options={workspace.modelOptions}
-                        onChange={workspace.setModel}
-                      />
-                    ) : (
-                      <input
-                        className="compact-input"
-                        value={workspace.model}
-                        onChange={(event) => workspace.setModel(event.target.value)}
-                        placeholder="gpt-5.5"
-                      />
-                    )}
-                  </label>
-                  <button
-                    className="secondary-button model-fetch-button"
-                    type="button"
-                    disabled={!workspace.canFetchModels || workspace.isModelListPending}
-                    onClick={workspace.fetchModels}
-                  >
-                    {workspace.isModelListPending ? "获取中..." : "获取模型"}
-                  </button>
-                </div>
-                <p className={workspace.modelListStatus === "error" ? "model-list-message error" : "model-list-message"}>
-                  {workspace.modelListMessage}
-                </p>
-                <label>
-                  <span>API Key（仅本次请求）</span>
-                  <input
-                    className="compact-input sensitive-input"
-                    type="password"
-                    value={workspace.apiKey}
-                    onChange={(event) => workspace.setApiKey(event.target.value)}
-                    placeholder="不会保存到本地草稿或仓库"
-                  />
-                </label>
-              </div>
-            )}
-          </div>
 
           <label className="field-label" htmlFor="novel">
             小说正文
@@ -188,7 +117,48 @@ export function WorkspacePage() {
           {workspace.sourceMessage ? <p className="source-message">{workspace.sourceMessage}</p> : null}
         </div>
 
-        <div className="panel route-side-panel">
+        <div className="panel route-side-panel conversion-panel">
+          <div className="conversion-card" aria-label="生成准备">
+            <div className="chapter-outline-head">
+              <div>
+                <p className="section-kicker">Generate</p>
+                <h3>生成准备</h3>
+              </div>
+              <span className={workspace.chapterOutline.ready || hasGeneratedYaml ? "outline-pill ok" : "outline-pill bad"}>
+                {conversionStatusText}
+              </span>
+            </div>
+
+            <div className="conversion-stats">
+              <ReadinessStat label="小说章节" value={`${chapterCount}/${workspace.chapterOutline.minimumChapters}`} />
+              <ReadinessStat label="输出格式" value="YAML" />
+              <ReadinessStat label="下一步" value="编辑导出" />
+            </div>
+
+            <p className="conversion-copy">先让章节数达标，再生成结构化剧本。生成后到编辑页检查 Schema、继续打磨并导出。</p>
+
+            <button
+              className="primary-button conversion-button"
+              type="button"
+              disabled={!workspace.canConvert || workspace.isPending}
+              onClick={workspace.convert}
+            >
+              {conversionButtonText}
+            </button>
+
+            {hasGeneratedYaml ? (
+              <div className="generated-next-step">
+                <div>
+                  <strong>YAML 剧本已生成</strong>
+                  <p>现在去编辑页校验、修改和导出。</p>
+                </div>
+                <Link className="secondary-button next-step-button" href="/script">
+                  去编辑 YAML
+                </Link>
+              </div>
+            ) : null}
+          </div>
+
           <div className="chapter-outline-card" aria-label="章节大纲预览">
             <div className="chapter-outline-head">
               <div>
@@ -218,15 +188,6 @@ export function WorkspacePage() {
               <p className="empty-outline">还没有识别到章节。支持“第1章”“第一章”“Chapter 1”等标题格式。</p>
             )}
           </div>
-
-          <div className="status-row stacked-actions">
-            <span className={workspace.chapterOutline.ready ? "status ok" : "status bad"}>
-              已识别 {workspace.chapterOutline.chapterCount} 章 · {workspace.outlineStatusText}
-            </span>
-            <button className="primary-button" type="button" disabled={!workspace.canConvert || workspace.isPending} onClick={workspace.convert}>
-              {workspace.isPending ? "转换中..." : "转换为 YAML 剧本"}
-            </button>
-          </div>
           {workspace.error ? <p className="error-box">{workspace.error}</p> : null}
         </div>
       </div>
@@ -234,3 +195,34 @@ export function WorkspacePage() {
   );
 }
 
+function StepPill({ index, label, tone = "light" }: { index: string; label: string; tone?: "dark" | "light" }) {
+  const className =
+    tone === "dark"
+      ? "inline-flex items-center gap-2 rounded-full bg-neutral-950 px-4 py-2.5 text-sm font-black text-white shadow-[0_14px_34px_rgba(23,23,23,0.22)]"
+      : "inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/85 px-4 py-2.5 text-sm font-black text-neutral-900 shadow-[0_12px_30px_rgba(15,23,42,0.07)]";
+
+  return (
+    <span className={className}>
+      <span className={tone === "dark" ? "text-white/45" : "text-neutral-400"}>{index}</span>
+      {label}
+    </span>
+  );
+}
+
+function StatChip({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "ok" | "bad" }) {
+  return (
+    <span className={`source-stat ${tone}`}>
+      <small>{label}</small>
+      <strong>{value}</strong>
+    </span>
+  );
+}
+
+function ReadinessStat({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="conversion-stat">
+      <small>{label}</small>
+      <strong>{value}</strong>
+    </span>
+  );
+}

@@ -11,7 +11,7 @@ export function DraftsPage() {
         <div>
           <p className="eyebrow">Local Drafts</p>
           <h1>项目草稿</h1>
-          <p className="lead">草稿只保存在当前浏览器 localStorage。保存小说、YAML 和转换报告，不保存 API Key 或模型配置。</p>
+          <p className="lead">草稿只保存在当前浏览器 localStorage。保存小说、YAML 和转换报告，不保存 API Key 等敏感设置。</p>
         </div>
         <div className="draft-actions">
           <button className="primary-button" type="button" onClick={workspace.saveDraft}>

@@ -3,13 +3,7 @@ import { getActiveWorkbenchRoute, WORKBENCH_NAV_ITEMS } from "./workbench-nav";
 
 describe("workbench nav", () => {
   test("defines the product workbench routes in display order", () => {
-    expect(WORKBENCH_NAV_ITEMS.map((item) => item.href)).toEqual([
-      "/workspace",
-      "/script",
-      "/projects",
-      "/drafts",
-      "/report"
-    ]);
+    expect(WORKBENCH_NAV_ITEMS.map((item) => item.href)).toEqual(["/workspace", "/script"]);
   });
 
   test("uses workspace as the default active route", () => {
