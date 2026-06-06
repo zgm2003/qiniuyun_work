@@ -8,6 +8,7 @@ export type WorkbenchNavItem = {
 
 export const WORKBENCH_NAV_ITEMS: WorkbenchNavItem[] = [
   { href: "/workspace", label: "工作台", description: "小说输入、章节预览、一键生成" },
+  { href: "/projects", label: "项目库", description: "MySQL 保存的项目和 YAML 版本" },
   { href: "/script", label: "编辑 YAML", description: "Schema 校验、质量清单、导出" }
 ];
 
