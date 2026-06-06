@@ -181,6 +181,36 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
   }
 }
 
+class IncompleteGenerationRunJoinRunner implements MysqlQueryRunner {
+  async query<T extends RowDataPacket[] | RowDataPacket[][] | ResultSetHeader>(
+    sql: string,
+    _values: unknown[] = []
+  ): Promise<[T, ...unknown[]]> {
+    if (sql.includes("FROM projects p") && sql.includes("LEFT JOIN generation_runs")) {
+      return [
+        [
+          {
+            id: "project-1",
+            title: "项目 A",
+            source_text: "原文 A",
+            status: "generated",
+            created_at: new Date("2026-06-05T01:00:00.000Z"),
+            updated_at: new Date("2026-06-05T02:00:00.000Z"),
+            latest_run_id: "run-broken",
+            latest_run_project_id: "project-1",
+            latest_run_provider: "openai-compatible",
+            latest_run_model: "cheap-model",
+            latest_run_status: "succeeded",
+            latest_run_created_at: new Date("2026-06-05T02:10:00.000Z")
+          }
+        ] as RowDataPacket[] as T
+      ];
+    }
+
+    throw new Error(`Unhandled SQL: ${sql}`);
+  }
+}
+
 describe("project persistence service", () => {
   it("creates a draft project with a trimmed title", async () => {
     const runner = new FakeRunner();
@@ -358,7 +388,7 @@ describe("project persistence service", () => {
     const projects = await listProjects(runner);
 
     expect(projects.map((project) => project.title)).toEqual(["项目 B", "项目 A"]);
-    expect(projects[0].latestGenerationRun).toBeNull();
+    expect(projects.map((project) => project.latestGenerationRun)).toEqual([null, null]);
   });
 
   it("lists projects with the latest generation run summary", async () => {
@@ -382,18 +412,33 @@ describe("project persistence service", () => {
       error_message: null,
       created_at: new Date("2026-06-05T02:00:00.000Z")
     });
+    runner.generationRuns.push({
+      id: "run-z",
+      project_id: project.id,
+      provider: "openai-compatible",
+      model: "cheap-z",
+      status: "failed",
+      error_message: "同时间更大 id",
+      created_at: new Date("2026-06-05T02:00:00.000Z")
+    });
 
     const projects = await listProjects(runner);
 
     expect(projects[0].latestGenerationRun).toEqual({
-      id: "run-new",
+      id: "run-z",
       projectId: project.id,
       provider: "openai-compatible",
-      model: "cheap-new",
-      status: "succeeded",
-      errorMessage: null,
+      model: "cheap-z",
+      status: "failed",
+      errorMessage: "同时间更大 id",
       createdAt: "2026-06-05T02:00:00.000Z"
     });
+  });
+
+  it("rejects joined generation run rows with missing aliases", async () => {
+    const runner = new IncompleteGenerationRunJoinRunner();
+
+    await expect(listProjects(runner)).rejects.toThrow("generation_runs join returned an incomplete row");
   });
 
   it("loads the latest script version for a project", async () => {

@@ -82,13 +82,16 @@ type ProjectRow = RowDataPacket & {
   status: ProjectStatus;
   created_at: Date;
   updated_at: Date;
-  latest_run_id?: string | null;
-  latest_run_project_id?: string | null;
-  latest_run_provider?: ProviderName | null;
-  latest_run_model?: string | null;
-  latest_run_status?: GenerationRunStatus | null;
-  latest_run_error_message?: string | null;
-  latest_run_created_at?: Date | null;
+};
+
+type ProjectListRow = ProjectRow & {
+  latest_run_id: string | null;
+  latest_run_project_id: string | null;
+  latest_run_provider: ProviderName | null;
+  latest_run_model: string | null;
+  latest_run_status: GenerationRunStatus | null;
+  latest_run_error_message: string | null;
+  latest_run_created_at: Date | null;
 };
 
 type ScriptVersionRow = RowDataPacket & {
@@ -141,8 +144,20 @@ function mapProjectRow(row: ProjectRow): ProjectRecord {
   };
 }
 
-function mapLatestGenerationRun(row: ProjectRow): GenerationRunSummary | null {
-  if (!row.latest_run_id) {
+function mapLatestGenerationRun(row: ProjectListRow): GenerationRunSummary | null {
+  if (
+    !("latest_run_id" in row) ||
+    !("latest_run_project_id" in row) ||
+    !("latest_run_provider" in row) ||
+    !("latest_run_model" in row) ||
+    !("latest_run_status" in row) ||
+    !("latest_run_error_message" in row) ||
+    !("latest_run_created_at" in row)
+  ) {
+    throw new Error("generation_runs join returned an incomplete row");
+  }
+
+  if (row.latest_run_id === null) {
     return null;
   }
 
@@ -156,7 +171,7 @@ function mapLatestGenerationRun(row: ProjectRow): GenerationRunSummary | null {
     provider: row.latest_run_provider,
     model: row.latest_run_model,
     status: row.latest_run_status,
-    errorMessage: row.latest_run_error_message ?? null,
+    errorMessage: row.latest_run_error_message,
     createdAt: row.latest_run_created_at.toISOString()
   };
 }
@@ -219,7 +234,7 @@ export async function createProject(input: CreateProjectInput, runner?: MysqlQue
 }
 
 export async function listProjects(runner?: MysqlQueryRunner): Promise<ProjectListItem[]> {
-  const [rows] = await resolveRunner(runner).query<ProjectRow[]>(
+  const [rows] = await resolveRunner(runner).query<ProjectListRow[]>(
     `SELECT p.id, p.title, p.source_text, p.status, p.created_at, p.updated_at,
             gr.id AS latest_run_id,
             gr.project_id AS latest_run_project_id,
