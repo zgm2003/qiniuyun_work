@@ -19,7 +19,7 @@
 
 ## Scope Guard
 
-This task explicitly does not implement MySQL, Redis, RBAC, JWT, login, admin pages, or asynchronous jobs. Those belong to later productization phases after the competition delivery line is locked.
+This task explicitly does not implement MySQL, Redis, account systems, platform configuration pages, or asynchronous jobs. Those belong outside the competition delivery line.
 
 ### Task 1: Add requirement checklist document
 
@@ -92,9 +92,9 @@ npm run dev
 
 ## 不把数据库作为当前题目验收项
 
-MySQL、Redis、登录、RBAC、JWT、管理端和异步任务属于产品化阶段，不属于题目三的必要验收条件。当前阶段先保证小说转 YAML 剧本、Schema 文档和可编辑校验闭环稳定。
+账号体系、Redis、平台配置页面和异步任务不属于题目三的必要验收条件。当前阶段先保证小说转 YAML 剧本、Schema 文档和可编辑校验闭环稳定。
 
-后续数据库持久化应先保存完整项目和 YAML 版本，再考虑拆分角色、场景和台词表。Redis 只在出现异步任务、限流、会话缓存或任务状态缓存时引入。
+后续数据库持久化应先保存完整项目和 YAML 版本，再考虑拆分角色、场景和台词表。Redis 只在出现异步任务、限流或任务状态缓存时引入。
 ```
 
 - [ ] **Step 2: Confirm document has no placeholders**

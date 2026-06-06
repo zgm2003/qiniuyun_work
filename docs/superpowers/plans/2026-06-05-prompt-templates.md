@@ -12,7 +12,7 @@
 
 ## Scope Guard
 
-P5 implements Prompt templating only. It does not implement Prompt management UI, RBAC, audit logs, AI provider encrypted key storage, Redis, workflow orchestration, multi-tenant inheritance, or arbitrary template expressions. `/api/convert` request and response shape stay unchanged.
+P5 implements Prompt templating only. It does not implement Prompt management UI, audit logs, AI provider encrypted key storage, Redis, workflow orchestration, multi-tenant inheritance, or arbitrary template expressions. `/api/convert` request and response shape stay unchanged.
 
 ## File Structure
 
@@ -688,13 +688,13 @@ git commit -m "feat: render ai prompts from templates"
 Change the production roadmap sentence from:
 
 ```md
-Redis、RBAC、Prompt 模板化和 AI 供应商配置加密入库仍是后续阶段。
+Redis 和 AI 供应商配置加密入库仍是后续阶段。
 ```
 
 to:
 
 ```md
-Redis、RBAC 和 AI 供应商配置加密入库仍是后续阶段；Prompt 模板化已完成基础模块和默认 fallback。
+Redis 和 AI 供应商配置加密入库仍是后续阶段；Prompt 模板化已完成基础模块和默认 fallback。
 ```
 
 Add a short section:
@@ -802,7 +802,7 @@ Expected: working tree clean; commits show schema, renderer, fallback, provider 
 
 - P5 does not change `/api/convert` request or response shape.
 - P5 does not store API Key, Base URL, provider credentials, or model settings.
-- P5 does not add Prompt management UI, RBAC, Redis, workflow orchestration, or script execution.
+- P5 does not add Prompt management UI, Redis, workflow orchestration, or script execution.
 - The default templates preserve the existing YAML / JSON generation requirements.
 - Unknown template variables fail loudly instead of being silently ignored.
 - DB lookup fallback is deliberate because template storage is an optional read source in P5.

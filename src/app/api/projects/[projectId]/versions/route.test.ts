@@ -2,18 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { createScriptVersion } from "@/lib/server/projects";
 import { convertNovelToScript } from "@/lib/mock-converter";
-import { readCurrentUser } from "@/app/api/_auth";
 
 vi.mock("@/lib/server/projects", () => ({
   createScriptVersion: vi.fn()
 }));
 
-vi.mock("@/app/api/_auth", () => ({
-  readCurrentUser: vi.fn()
-}));
-
 const createScriptVersionMock = vi.mocked(createScriptVersion);
-const readCurrentUserMock = vi.mocked(readCurrentUser);
 const validNovel = `第1章 雨夜来信
 林夏在旧书店收到一封没有署名的信。
 
@@ -39,8 +33,6 @@ function context(projectId = "project-1") {
 describe("POST /api/projects/[projectId]/versions", () => {
   beforeEach(() => {
     createScriptVersionMock.mockReset();
-    readCurrentUserMock.mockReset();
-    readCurrentUserMock.mockResolvedValue(null);
   });
 
   it("creates a script version", async () => {
@@ -61,30 +53,7 @@ describe("POST /api/projects/[projectId]/versions", () => {
     expect(createScriptVersionMock).toHaveBeenCalledWith({
       projectId: "project-1",
       yaml: generated.yaml,
-      report: generated.report,
-      ownerUserId: undefined
-    });
-  });
-
-  it("passes the current user id when writing owned project versions", async () => {
-    readCurrentUserMock.mockResolvedValue({ id: "user-1", email: "author@example.com", name: "作者" });
-    createScriptVersionMock.mockResolvedValue({
-      id: "version-1",
-      projectId: "project-1",
-      yaml: generated.yaml,
-      report: generated.report,
-      validation: { ok: true, document: expect.any(Object) },
-      createdAt: "2026-06-05T01:00:00.000Z"
-    });
-
-    const response = await POST(jsonRequest({ yaml: generated.yaml, report: generated.report }), context());
-
-    expect(response.status).toBe(201);
-    expect(createScriptVersionMock).toHaveBeenCalledWith({
-      projectId: "project-1",
-      yaml: generated.yaml,
-      report: generated.report,
-      ownerUserId: "user-1"
+      report: generated.report
     });
   });
 
@@ -103,7 +72,6 @@ describe("POST /api/projects/[projectId]/versions", () => {
     expect(body.error).toBe("请求体必须是 JSON");
     expect(createScriptVersionMock).not.toHaveBeenCalled();
   });
-
 
   it("returns 400 for blank project ids", async () => {
     const response = await POST(jsonRequest({ yaml: generated.yaml, report: generated.report }), context("   "));
@@ -130,6 +98,16 @@ describe("POST /api/projects/[projectId]/versions", () => {
     expect(body.error).toContain("YAML 未通过 Schema 校验");
   });
 
+  it("returns 404 when the project does not exist", async () => {
+    createScriptVersionMock.mockRejectedValue(new Error("项目不存在"));
+
+    const response = await POST(jsonRequest({ yaml: generated.yaml, report: generated.report }), context());
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.error).toBe("项目不存在");
+  });
+
   it("returns 500 when persistence fails", async () => {
     createScriptVersionMock.mockRejectedValue(new Error("database down"));
 
@@ -138,16 +116,5 @@ describe("POST /api/projects/[projectId]/versions", () => {
 
     expect(response.status).toBe(500);
     expect(body.error).toBe("剧本版本保存失败");
-  });
-
-  it("returns 404 when the owned project is not writable by the current user", async () => {
-    readCurrentUserMock.mockResolvedValue({ id: "user-2", email: "other@example.com", name: "其他作者" });
-    createScriptVersionMock.mockRejectedValue(new Error("项目不存在"));
-
-    const response = await POST(jsonRequest({ yaml: generated.yaml, report: generated.report }), context());
-    const body = await response.json();
-
-    expect(response.status).toBe(404);
-    expect(body.error).toBe("项目不存在");
   });
 });

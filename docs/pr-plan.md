@@ -38,17 +38,15 @@ npm run build
 
 ## 产品化阶段 PR 拆分
 
-比赛 MVP 收尾后，后续大改继续按小 PR 推进，不能把 UI、数据库、登录、管理端和 Prompt 系统一次性塞进一个 PR。
+比赛 MVP 收尾后，后续大改继续按小 PR 推进，不能把 UI、数据库、平台配置和 Prompt 系统一次性塞进一个 PR。
 
 | 顺序 | 类型 | 标题 | 作用 |
 | --- | --- | --- | --- |
 | 1 | docs | product architecture and style guideline | 明确产品化架构、样式规则和后续 AI 改动边界。 |
 | 2 | style | restyle workspace shell | 参考中性 SaaS / 管理台风格重做工作台外观，不改业务行为。 |
 | 3 | feat | database foundation | 后续 PR 接入最小 MySQL 持久化；Redis 仅在异步/限流需求出现时再单独评估。 |
-| 4 | feat | auth foundation | P4：登录、会话、用户隔离和服务端项目列表；不破坏未登录题目三演示闭环。 |
-| 5 | feat | prompt template management | P5：将硬编码提示词迁移为固定变量模板，输出仍受 YAML Schema 约束。 |
-| 6 | feat | encrypted AI provider settings | P6：AI 供应商、模型、健康检查入库，API Key 使用 AES-256-GCM 加密。 |
-| 7 | feat | RBAC and admin shell | P7：为 Prompt 模板和 AI 供应商配置提供最小管理端权限边界。 |
+| 4 | feat | prompt template management | P4：将硬编码提示词迁移为固定变量模板，输出仍受 YAML Schema 约束。 |
+| 5 | feat | encrypted AI provider settings | P5：AI 供应商、模型、健康检查入库，API Key 使用 AES-256-GCM 加密。 |
 
 ## 产品化阶段已推进
 
@@ -56,13 +54,12 @@ npm run build
 | --- | --- | --- | --- |
 | P1 | docs | product architecture and style guideline | 明确产品化架构边界和后续 UI 改动规则。 |
 | P2 | refactor/style | routed workspace shell | 将拥挤单页拆成 `/workspace`、`/script`、`/drafts`、`/report`，并调整为中性 SaaS / 管理台风格。 |
-| P3 | feat | database foundation | 接入 MySQL 基础持久化，保存项目、剧本版本和生成记录；localStorage 草稿保留，Redis/Auth/RBAC 后置。 |
-| P4 | feat | auth project ownership | 登录、会话、用户隔离和服务端项目列表；未登录仍可完成小说转 YAML 剧本演示闭环。 |
-| P5 | feat | prompt template management | Prompt 模板化；固定变量渲染，输出仍受 YAML Schema 约束。 |
+| P3 | feat | database foundation | 接入 MySQL 基础持久化，保存项目、剧本版本和生成记录；localStorage 草稿保留，Redis 后置。 |
+| P4 | feat | prompt template management | Prompt 模板化；固定变量渲染，输出仍受 YAML Schema 约束。 |
 
 ## 下一阶段计划
 
-### PR 18：AI 供应商配置加密入库
+### 下一步：AI 供应商配置加密入库
 
 目标：AI Base URL、模型和 Key 入库；Key 使用 AES-256-GCM 加密，主密钥只来自服务端 env，前端只显示 masked 状态。
 

@@ -5,11 +5,11 @@ import { convertNovelToScript } from "@/lib/mock-converter";
 import {
   createProject,
   createScriptVersion,
-  getProjectForUser,
-  listProjectsForUser,
+  getProject,
+  listProjects,
   recordGenerationRun,
   type GenerationRunStatus,
-  updateProjectForUser
+  updateProject
 } from "./projects";
 
 const validNovel = `第1章 雨夜来信
@@ -34,7 +34,12 @@ class FakeRunner implements MysqlQueryRunner {
     values?: unknown[]
   ): Promise<[T, ...unknown[]]> {
     this.calls.push({ sql, values });
-    return [{} as T];
+
+    if (sql.includes("SELECT id") && sql.includes("FROM projects") && sql.includes("WHERE id = ?")) {
+      return [[{ id: values?.[0] }] as RowDataPacket[] as T];
+    }
+
+    return [{ affectedRows: 1 } as ResultSetHeader as T];
   }
 }
 
@@ -60,10 +65,23 @@ class FakeTransactionalRunner extends FakeRunner {
   }
 }
 
+class MissingProjectRunner extends FakeTransactionalRunner {
+  async query<T extends RowDataPacket[] | RowDataPacket[][] | ResultSetHeader>(
+    sql: string,
+    values?: unknown[]
+  ): Promise<[T, ...unknown[]]> {
+    if (sql.includes("SELECT id") && sql.includes("FROM projects") && sql.includes("WHERE id = ?")) {
+      this.calls.push({ sql, values });
+      return [[] as RowDataPacket[] as T];
+    }
+
+    return super.query<T>(sql, values);
+  }
+}
+
 class FakeProjectStoreRunner implements MysqlQueryRunner {
   projects: Array<{
     id: string;
-    owner_user_id: string | null;
     title: string;
     source_text: string;
     status: "draft" | "generated" | "failed";
@@ -84,18 +102,9 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
     values: unknown[] = []
   ): Promise<[T, ...unknown[]]> {
     if (sql.includes("INSERT INTO projects")) {
-      const [id, ownerUserId, title, sourceText, status, createdAt, updatedAt] = values as [
-        string,
-        string | null,
-        string,
-        string,
-        "draft",
-        Date,
-        Date
-      ];
+      const [id, title, sourceText, status, createdAt, updatedAt] = values as [string, string, string, "draft", Date, Date];
       this.projects.push({
         id,
-        owner_user_id: ownerUserId,
         title,
         source_text: sourceText,
         status,
@@ -105,19 +114,14 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
       return [{ affectedRows: 1 } as ResultSetHeader as T];
     }
 
-    if (sql.includes("WHERE owner_user_id = ?")) {
-      const [ownerUserId] = values as [string];
-      const rows = this.projects
-        .filter((project) => project.owner_user_id === ownerUserId)
-        .sort((left, right) => right.updated_at.getTime() - left.updated_at.getTime());
+    if (sql.includes("FROM projects") && sql.includes("ORDER BY updated_at DESC")) {
+      const rows = [...this.projects].sort((left, right) => right.updated_at.getTime() - left.updated_at.getTime());
       return [rows as RowDataPacket[] as T];
     }
 
-    if (sql.includes("WHERE id = ? AND owner_user_id = ?") && sql.includes("SELECT")) {
-      const [projectId, ownerUserId] = values as [string, string];
-      return [
-        this.projects.filter((project) => project.id === projectId && project.owner_user_id === ownerUserId) as RowDataPacket[] as T
-      ];
+    if (sql.includes("FROM projects") && sql.includes("WHERE id = ?") && sql.includes("SELECT")) {
+      const [projectId] = values as [string];
+      return [this.projects.filter((project) => project.id === projectId) as RowDataPacket[] as T];
     }
 
     if (sql.includes("FROM script_versions") && sql.includes("WHERE project_id = ?")) {
@@ -129,9 +133,9 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
       return [rows as RowDataPacket[] as T];
     }
 
-    if (sql.includes("UPDATE projects") && sql.includes("WHERE id = ? AND owner_user_id = ?")) {
-      const [title, sourceText, updatedAt, projectId, ownerUserId] = values as [string, string, Date, string, string];
-      const project = this.projects.find((item) => item.id === projectId && item.owner_user_id === ownerUserId);
+    if (sql.includes("UPDATE projects") && sql.includes("WHERE id = ?")) {
+      const [title, sourceText, updatedAt, projectId] = values as [string, string, Date, string];
+      const project = this.projects.find((item) => item.id === projectId);
       if (!project) {
         return [{ affectedRows: 0 } as ResultSetHeader as T];
       }
@@ -166,26 +170,11 @@ describe("project persistence service", () => {
     expect(project.id).toHaveLength(36);
     expect(runner.calls).toHaveLength(1);
     expect(runner.calls[0].sql).toContain("INSERT INTO projects");
-    expect(runner.calls[0].values?.[2]).toBe("雨夜来信");
-    expect(runner.calls[0].values?.[4]).toBe("draft");
+    expect(runner.calls[0].sql).not.toContain("owner_user_id");
+    expect(runner.calls[0].values?.[1]).toBe("雨夜来信");
+    expect(runner.calls[0].values?.[3]).toBe("draft");
+    expect(runner.calls[0].values?.[4]).toBeInstanceOf(Date);
     expect(runner.calls[0].values?.[5]).toBeInstanceOf(Date);
-    expect(runner.calls[0].values?.[6]).toBeInstanceOf(Date);
-  });
-
-  it("creates owner-bound projects when an owner user id is provided", async () => {
-    const runner = new FakeRunner();
-
-    const project = await createProject(
-      {
-        title: "雨夜来信",
-        sourceText: "第1章 A\n正文",
-        ownerUserId: "user-1"
-      },
-      runner
-    );
-
-    expect(project.ownerUserId).toBe("user-1");
-    expect(runner.calls[0].values?.[1]).toBe("user-1");
   });
 
   it("rejects blank project titles instead of inventing a default", async () => {
@@ -269,13 +258,24 @@ describe("project persistence service", () => {
       runner
     );
 
-    expect(runner.calls.map((call) => call.sql.split(/\s+/)[0])).toEqual([
+    expect(runner.calls.map((call) => call.sql.trim().split(/\s+/)[0])).toEqual([
+      "SELECT",
       "BEGIN",
       "INSERT",
       "UPDATE",
       "COMMIT",
       "RELEASE"
     ]);
+  });
+
+  it("rejects script versions for missing projects", async () => {
+    const runner = new MissingProjectRunner();
+    const generated = convertNovelToScript({ title: "雨夜来信", text: validNovel });
+
+    await expect(createScriptVersion({ projectId: "missing-project", yaml: generated.yaml, report: generated.report }, runner)).rejects.toThrow(
+      "项目不存在"
+    );
+    expect(runner.calls.some((call) => call.sql.includes("INSERT INTO script_versions"))).toBe(false);
   });
 
   it("records generation runs without changing project assets", async () => {
@@ -300,35 +300,39 @@ describe("project persistence service", () => {
       status,
       errorMessage: "AI 服务请求失败：500"
     });
-    expect(runner.calls).toHaveLength(1);
-    expect(runner.calls[0].sql).toContain("INSERT INTO generation_runs");
-    expect(runner.calls[0].values?.[4]).toBe("failed");
-    expect(runner.calls[0].values?.[5]).toBe("AI 服务请求失败：500");
-    expect(runner.calls[0].values?.[6]).toBeInstanceOf(Date);
+    expect(runner.calls).toHaveLength(2);
+    expect(runner.calls[0].sql).toContain("FROM projects");
+    expect(runner.calls[1].sql).toContain("INSERT INTO generation_runs");
+    expect(runner.calls[1].values?.[4]).toBe("failed");
+    expect(runner.calls[1].values?.[5]).toBe("AI 服务请求失败：500");
+    expect(runner.calls[1].values?.[6]).toBeInstanceOf(Date);
   });
 
-  it("lists only projects owned by the current user", async () => {
-    const runner = new FakeProjectStoreRunner();
-    await createProject({ title: "用户 A 项目", sourceText: "原文 A", ownerUserId: "user-a" }, runner);
-    await createProject({ title: "用户 B 项目", sourceText: "原文 B", ownerUserId: "user-b" }, runner);
+  it("rejects generation runs for missing projects", async () => {
+    const runner = new MissingProjectRunner();
 
-    const projects = await listProjectsForUser("user-a", runner);
-
-    expect(projects).toHaveLength(1);
-    expect(projects[0].title).toBe("用户 A 项目");
+    await expect(
+      recordGenerationRun({ projectId: "missing-project", provider: "openai-compatible", model: "gpt-5.5", status: "failed" }, runner)
+    ).rejects.toThrow("项目不存在");
+    expect(runner.calls.some((call) => call.sql.includes("INSERT INTO generation_runs"))).toBe(false);
   });
 
-  it("does not load another user's project", async () => {
+  it("lists all server project drafts", async () => {
     const runner = new FakeProjectStoreRunner();
-    const project = await createProject({ title: "用户 A 项目", sourceText: "原文 A", ownerUserId: "user-a" }, runner);
+    await createProject({ title: "项目 A", sourceText: "原文 A" }, runner);
+    await createProject({ title: "项目 B", sourceText: "原文 B" }, runner);
+    runner.projects[0].updated_at = new Date("2026-06-05T01:00:00.000Z");
+    runner.projects[1].updated_at = new Date("2026-06-05T02:00:00.000Z");
 
-    await expect(getProjectForUser(project.id, "user-b", runner)).resolves.toBeNull();
+    const projects = await listProjects(runner);
+
+    expect(projects.map((project) => project.title)).toEqual(["项目 B", "项目 A"]);
   });
 
-  it("loads the latest script version for the current user's project", async () => {
+  it("loads the latest script version for a project", async () => {
     const runner = new FakeProjectStoreRunner();
-    const project = await createProject({ title: "用户 A 项目", sourceText: "原文 A", ownerUserId: "user-a" }, runner);
-    const generated = convertNovelToScript({ title: "用户 A 项目", text: validNovel });
+    const project = await createProject({ title: "项目 A", sourceText: "原文 A" }, runner);
+    const generated = convertNovelToScript({ title: "项目 A", text: validNovel });
     runner.scriptVersions.push({
       id: "version-old",
       project_id: project.id,
@@ -346,7 +350,7 @@ describe("project persistence service", () => {
       created_at: new Date("2026-06-05T02:00:00.000Z")
     });
 
-    const detail = await getProjectForUser(project.id, "user-a", runner);
+    const detail = await getProject(project.id, runner);
 
     expect(detail?.latestVersion).toMatchObject({
       id: "version-new",
@@ -358,18 +362,13 @@ describe("project persistence service", () => {
     });
   });
 
-  it("updates only projects owned by the current user", async () => {
+  it("updates a project draft", async () => {
     const runner = new FakeProjectStoreRunner();
-    const project = await createProject({ title: "用户 A 项目", sourceText: "原文 A", ownerUserId: "user-a" }, runner);
+    const project = await createProject({ title: "项目 A", sourceText: "原文 A" }, runner);
 
-    await expect(
-      updateProjectForUser({ projectId: project.id, ownerUserId: "user-b", title: "坏更新", sourceText: "坏正文" }, runner)
-    ).rejects.toThrow("项目不存在");
-    await expect(
-      updateProjectForUser({ projectId: project.id, ownerUserId: "user-a", title: "好更新", sourceText: "好正文" }, runner)
-    ).resolves.toMatchObject({
+    await expect(updateProject({ projectId: "missing-project", title: "坏更新", sourceText: "坏正文" }, runner)).rejects.toThrow("项目不存在");
+    await expect(updateProject({ projectId: project.id, title: "好更新", sourceText: "好正文" }, runner)).resolves.toMatchObject({
       id: project.id,
-      ownerUserId: "user-a",
       title: "好更新",
       sourceText: "好正文"
     });

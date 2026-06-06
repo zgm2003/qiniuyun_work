@@ -1,6 +1,6 @@
 # 产品化架构说明
 
-当前仓库已经完成比赛演示闭环，但它还不是一个可运营产品。后续改动必须先把边界切清楚：哪些能力属于用户工作台，哪些能力属于管理端，哪些能力属于平台基础设施。否则登录、数据库、提示词、模型配置会继续堆进单页，复杂度失控。
+当前仓库已经完成比赛演示闭环，但它还不是一个可运营产品。后续改动必须先把边界切清楚：哪些能力属于作者工作台，哪些能力属于平台配置，哪些能力属于长期数据。否则数据库、提示词和模型配置会继续堆进单页，复杂度失控。
 
 ## 架构判断
 
@@ -9,16 +9,14 @@
 原因很简单：
 
 - 当前仓库已经是 Next.js 项目，比赛交付和录屏都依赖它。
-- App Router、Route Handler、Server Component、Middleware 足够承载中等规模的工作台和管理端。
-- 现在拆出 Go 后端会引入跨仓库接口、鉴权、部署和联调成本，短期收益不够。
+- App Router、Route Handler、Server Component 足够承载工作台和轻量平台配置。
+- 现在拆出独立后端会引入跨仓库接口、部署和联调成本，短期收益不够。
 
-如果后续业务已经明确接入既有 `admin_go` 后端生态，再迁移成“Next.js 前端 + Go 后端”也可以。但那是独立阶段，不应该混在当前产品化第一阶段里。
+如果后续业务已经明确接入既有后端生态，再迁移成“Next.js 前端 + 独立后端”也可以。但那是独立阶段，不应该混在当前产品化第一阶段里。
 
 ## 目标形态
 
 ```text
-用户登录
-↓
 进入小说改编工作台
 ↓
 创建 / 导入小说项目
@@ -32,11 +30,9 @@
 导出 YAML / Markdown / 其他格式
 ```
 
-管理端负责平台资源：
+平台配置负责：
 
 ```text
-用户管理
-角色和权限
 AI 供应商配置
 模型列表和健康检查
 Prompt 模板管理
@@ -47,15 +43,13 @@ Prompt 模板管理
 ## 推荐目录边界
 
 ```text
-src/app/(workspace)      用户工作台页面
-src/app/(admin)          管理端页面
-src/app/(auth)           登录、注册、找回入口
+src/app/(workspace)      作者工作台页面
+src/app/(settings)       平台配置页面
 src/app/api              API routes
 src/components           通用 UI 组件
 src/features/script      小说改编业务组件
-src/features/admin       管理端业务组件
+src/features/settings    平台配置业务组件
 src/lib/ai               AI provider、prompt、转换流程
-src/lib/auth             登录态、JWT、权限判断
 src/lib/db               MySQL、Redis、迁移脚本入口
 src/lib/script           章节、Schema、质量清单、导出
 ```
@@ -69,45 +63,13 @@ src/lib/script           章节、Schema、质量清单、导出
 
 ## 核心数据结构
 
-第一阶段不要过度拆表。先保存能恢复用户工作的最小数据。
-
-### 用户与权限
-
-```text
-users
-- id
-- email
-- password_hash
-- name
-- status
-- created_at
-- updated_at
-
-roles
-- id
-- code
-- name
-
-user_roles
-- user_id
-- role_id
-```
-
-RBAC 第一版只需要：
-
-```text
-admin
-member
-```
-
-不要一开始做复杂 permission matrix。先解决真实问题：谁能进入管理端，谁只能管理自己的项目。
+第一阶段不要过度拆表。先保存能恢复作者工作的最小数据。
 
 ### 项目与版本
 
 ```text
 projects
 - id
-- owner_user_id
 - title
 - source_text
 - status
@@ -120,7 +82,6 @@ script_versions
 - yaml
 - report_json
 - validation_json
-- created_by
 - created_at
 ```
 
@@ -135,8 +96,14 @@ ai_providers
 - driver
 - base_url
 - api_key_ciphertext
+- api_key_iv
+- api_key_auth_tag
+- api_key_version
 - status
+- is_default
 - health_status
+- health_message
+- last_health_checked_at
 - created_at
 - updated_at
 
@@ -146,42 +113,58 @@ ai_provider_models
 - model_id
 - display_name
 - enabled
+- is_default
+- last_seen_at
+- created_at
+- updated_at
 ```
 
-API Key 必须按敏感数据处理。没有密钥加密方案前，不要随便把明文 key 入库。
+API Key 必须按敏感数据处理。明文 key 不能入库，不能返回浏览器端。
 
 ### Prompt 模板
 
 ```text
 prompt_templates
 - id
-- code
-- name
-- scene
+- template_key
+- version
+- format
 - system_prompt
 - user_prompt_template
-- schema_version
-- status
+- enabled
 - created_at
 - updated_at
 ```
 
-Prompt 模板可以被管理端维护，但运行时仍然必须通过 YAML Schema 校验。用户可配置不等于允许输出结构乱掉。
+Prompt 模板可以被平台配置维护，但运行时仍然必须通过 YAML Schema 校验。可配置不等于允许输出结构乱掉。
+
+### 生成记录
+
+```text
+generation_runs
+- id
+- project_id
+- provider
+- model
+- status
+- error_message
+- created_at
+```
+
+生成记录只记录排障需要的信息，不保存 API Key、Base URL 或一次性敏感配置。
 
 ## MySQL 与 Redis 边界
 
 MySQL 存放长期状态：
 
-- 用户
 - 项目
 - 剧本版本
 - AI 供应商
 - Prompt 模板
 - 调用记录
 
-Redis 存放短期状态：
+Redis 只在出现真实短期状态需求时再引入：
 
-- 登录 token 黑名单或会话缓存
 - 转换任务状态
 - 限流计数
 - 短期模型健康检查结果
@@ -195,14 +178,14 @@ Redis 存放短期状态：
 但是测试层可以保留 mock：
 
 - `mock` 用于单元测试、离线演示、CI。
-- 用户产品界面默认不暴露 mock。
-- API 层可以通过环境变量或测试注入使用 mock，但不能让生产用户误以为 mock 是真实生成。
+- 产品界面默认不暴露 mock。
+- API 层可以通过环境变量或测试注入使用 mock，但不能让生产使用者误以为 mock 是真实生成。
 
 这样不破坏当前比赛演示，也不把 mock 当产品能力卖。
 
 ## Prompt 模块化策略
 
-当前 hardcoded prompt 应迁移为模板模块：
+Prompt 模板模块包含：
 
 ```text
 默认系统 Prompt
@@ -221,6 +204,7 @@ YAML 校验
 {{chapter_count}}
 {{chapters}}
 {{schema_summary}}
+{{quality_rules}}
 ```
 
 不要第一版引入任意脚本、复杂表达式或插件系统。Prompt 模板是配置，不是代码执行环境。
@@ -232,10 +216,9 @@ YAML 校验
 1. `docs: add product architecture and style guideline`
 2. `style: restyle workspace shell`
 3. `feat: add database foundation`
-4. `feat: add auth foundation`
-5. `feat: add RBAC and admin shell`
-6. `feat: add AI provider settings`
-7. `feat: add prompt template management`
+4. `feat: add prompt template management`
+5. `feat: add AI provider settings`
+6. `chore: remove account concepts`
 
 每个 PR 合并后主分支都必须可运行。
 
@@ -243,9 +226,9 @@ YAML 校验
 
 第一阶段明确不做：
 
-- 不拆 Go 后端。
+- 不拆独立后端。
 - 不上复杂微服务。
-- 不一口气做完整权限矩阵。
+- 不一口气做账号体系。
 - 不把 scene、dialogue、character 全部拆表。
 - 不做多租户计费。
 - 不做插件市场。

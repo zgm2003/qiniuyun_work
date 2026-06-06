@@ -12,7 +12,7 @@
 
 ## Scope Guard
 
-This PR does not add MySQL, Redis, Auth, RBAC, admin provider settings, streaming, function calling, Conversations API, or database table decomposition. It must preserve the题目三 YAML output contract.
+This PR does not add MySQL, Redis, account systems, platform provider settings, streaming, function calling, Conversations API, or database table decomposition. It must preserve the题目三 YAML output contract.
 
 ## File Structure
 
@@ -857,20 +857,20 @@ In `docs/production-next-steps.md`:
 
 - Mark P2 as the current next implementation target or completed if this PR fully implements it.
 - Keep P3 MySQL as next after P2.
-- Keep Redis/Auth/RBAC out of P2.
+- Keep Redis and account systems out of P2.
 
 - [ ] **Step 4: Search stale docs**
 
 Run:
 
 ```powershell
-rg -n "直接输出 YAML|Chat Completions|OPENAI_COMPATIBLE_GENERATION_API|Responses API|Structured Outputs|MySQL|Redis|RBAC" README.md .env.example docs/production-next-steps.md docs/demo-script.md docs/final-demo-guide.md
+rg -n "直接输出 YAML|Chat Completions|OPENAI_COMPATIBLE_GENERATION_API|Responses API|Structured Outputs|MySQL|Redis" README.md .env.example docs/production-next-steps.md docs/demo-script.md docs/final-demo-guide.md
 ```
 
 Expected:
 
 - `Chat Completions` only appears as fallback/current-history text.
-- `MySQL/Redis/RBAC` only appear as later roadmap, not P2 scope.
+- `MySQL/Redis` only appear as later roadmap, not P2 scope.
 - `OPENAI_COMPATIBLE_GENERATION_API=responses` appears in env/docs.
 
 - [ ] **Step 5: Commit**
@@ -915,7 +915,7 @@ git status --short
 git diff --stat
 ```
 
-Expected: only Responses API + Structured Outputs implementation, tests, and docs. No database/auth/RBAC/admin files.
+Expected: only Responses API + Structured Outputs implementation, tests, and docs. No database/account-system/platform-settings files.
 
 - [ ] **Step 5: Commit any final verification-only doc updates**
 
@@ -924,7 +924,7 @@ Only commit if Task 7 revealed doc-only corrections. Do not create empty commits
 ## Self-Review Checklist
 
 - Spec coverage: Tasks cover JSON Schema, JSON parsing, YAML conversion, Responses request/response, errors, P1 production boundary, docs, and full verification.
-- Scope: No MySQL, Redis, Auth, RBAC, admin settings, streaming, function calling, or Conversations API.
+- Scope: No MySQL, Redis, account systems, platform settings, streaming, function calling, or Conversations API.
 - Compatibility: User-facing YAML contract remains unchanged; mock and Chat Completions fallback remain available for tests/development.
 - Safety: Production still uses server-owned API key and `store:false`.
 - No placeholders: Every task has exact files, commands, expected results, and concrete code shape.

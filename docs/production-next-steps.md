@@ -38,8 +38,8 @@
 
 1. 真实 AI 是产品能力，不把 `mock` 暴露为生产能力。
 2. YAML Schema 是核心协议，不能破坏已有 YAML 字段语义。
-3. 上线后 API Key 由服务端保存，普通用户不填写、不查看真实 Key。
-4. MySQL/Redis 属于后续 PR，本 P1 不接入。
+3. 上线后 API Key 由服务端保存，浏览器端不填写、不查看真实 Key。
+4. MySQL 已作为项目草稿和平台配置持久化基础；Redis 仍只在真实短期状态需求出现时再引入。
 5. 先保存完整 YAML 版本，不急着拆 `scene`、`dialogue`、`character` 多张表。
 6. 每个 PR 只做一件事，合并后 `npm test`、`npm run lint`、`npm run build` 必须通过。
 
@@ -70,7 +70,7 @@ npm run build
 
 ### P1：真实 AI 生产化配置
 
-目标：上线时使用服务端真实 AI 配置，而不是普通用户每次填写 API Key。
+目标：上线时使用服务端真实 AI 配置，而不是让浏览器端每次填写 API Key。
 
 必须做：
 
@@ -200,46 +200,7 @@ generation_runs
 - 不要用其他项目的 root DSN 作为生产配置。
 - 单独创建本项目数据库和最小权限用户。
 
-### P4：登录与会话
-
-状态：已实施。
-
-目标：用户可以拥有自己的项目。
-
-推荐第一版：
-
-```text
-邮箱 + 密码
-HttpOnly Cookie Session
-MySQL session 或短期 session 存储
-```
-
-不要做：
-
-```text
-JWT 存 localStorage
-复杂 OAuth
-复杂权限矩阵
-```
-
-必须做：
-
-- 用户注册。
-- 登录。
-- 登出。
-- 当前用户接口。
-- 项目按用户隔离。
-- `/projects` 服务端项目列表。
-- 未登录仍可完成题目三小说转 YAML 演示闭环。
-
-建议文件：
-
-- `src/lib/auth/*`
-- `src/app/(auth)/*`
-- `src/app/api/auth/*`
-- `src/lib/server/projects.ts`
-
-### P5：Prompt 模板化
+### P4：Prompt 模板化
 
 状态：已实施基础模块。
 
@@ -272,7 +233,7 @@ Prompt 市场
 多租户模板继承
 ```
 
-### P6：AI 供应商配置加密入库
+### P5：AI 供应商配置加密入库
 
 目标：平台统一管理 AI Key、Base URL、模型和健康状态。Key 必须加密后入库，前端永远不显示明文。
 
@@ -306,35 +267,11 @@ ai_provider_models
 - API Key 使用 AES-256-GCM 加密后入库。
 - 主密钥只来自服务端 env，不入库，不返回前端。
 - 前端只显示 masked key 状态。
-- 管理端可以刷新模型列表。
+- 受控平台配置入口可以刷新模型列表。
 - 工作台只使用已启用 provider 和 model。
 - 保留 `OPENAI_COMPATIBLE_*` env fallback，避免数据库配置异常时生产转换直接瘫痪。
 
-### P7：简单 RBAC 和管理端骨架
-
-目标：区分管理员和普通用户，为 Prompt 模板与 AI 供应商配置提供最小管理入口。
-
-第一版只需要：
-
-```text
-admin
-member
-```
-
-规则：
-
-- `admin` 能进入管理端。
-- `member` 只能管理自己的项目。
-- 所有权限判断必须在服务端执行。
-- 前端隐藏按钮只是 UX，不是授权。
-
-建议文件：
-
-- `src/lib/auth/rbac.ts`
-- `src/app/(admin)/*`
-- `src/features/admin/*`
-
-### P8：Redis 与异步任务
+### P6：Redis 与异步任务
 
 目标：支持长小说转换、任务状态和限流。
 
@@ -344,13 +281,12 @@ member
 - 需要任务进度。
 - 需要接口限流。
 - 需要短期模型健康状态缓存。
-- 需要 session 缓存或 token 黑名单。
 
 Redis 不存：
 
 - 小说正文长期资产。
 - YAML 剧本长期资产。
-- 用户项目主体数据。
+- 项目主体数据。
 
 ## 下个 AI 窗口接力提示
 
@@ -376,12 +312,11 @@ src/features/workspace/workspace-context.tsx
 3. P2 完成后下一步应该做什么，为什么？
 ```
 
-正确答案应该是：P3 MySQL 基础持久化、P4 登录与用户隔离、P5 Prompt 模板化基础模块已完成；下一步做 P6 AI 供应商配置加密入库；Redis 和完整 RBAC 继续后置。
+正确答案应该是：P3 MySQL 基础持久化、P4 Prompt 模板化、P5 AI 供应商配置加密入库已完成；下一步按真实痛点做减法式增强，例如局部重写、质量评分或异步任务；Redis 继续后置。
 
 ## 当前不要做
 
 - 不要马上接 Redis。
-- 不要马上做完整 RBAC；下一步先做 P6 AI 配置加密入库。
 - 不要把 scene、dialogue、character 全拆表。
 - 不要删除 `mock` 测试转换器。
 - 不要把生产 API Key 写到代码或文档。

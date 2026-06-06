@@ -11,7 +11,6 @@ export type GenerationRunStatus = "running" | "succeeded" | "failed";
 
 export type ProjectRecord = {
   id: string;
-  ownerUserId: string | null;
   title: string;
   sourceText: string;
   status: ProjectStatus;
@@ -47,12 +46,10 @@ export type GenerationRunRecord = {
 export type CreateProjectInput = {
   title: string;
   sourceText: string;
-  ownerUserId?: string | null;
 };
 
 export type UpdateProjectInput = {
   projectId: string;
-  ownerUserId: string;
   title: string;
   sourceText: string;
 };
@@ -61,7 +58,6 @@ export type CreateScriptVersionInput = {
   projectId: string;
   yaml: string;
   report: ConversionReport;
-  ownerUserId?: string;
 };
 
 export type RecordGenerationRunInput = {
@@ -70,12 +66,10 @@ export type RecordGenerationRunInput = {
   model: string;
   status: GenerationRunStatus;
   errorMessage?: string | null;
-  ownerUserId?: string;
 };
 
 type ProjectRow = RowDataPacket & {
   id: string;
-  owner_user_id: string | null;
   title: string;
   source_text: string;
   status: ProjectStatus;
@@ -125,7 +119,6 @@ function resolveTransactionRunner(runner?: MysqlQueryRunner): MysqlTransactionRu
 function mapProjectRow(row: ProjectRow): ProjectRecord {
   return {
     id: row.id,
-    ownerUserId: row.owner_user_id,
     title: row.title,
     sourceText: row.source_text,
     status: row.status,
@@ -169,7 +162,6 @@ async function getLatestScriptVersion(projectId: string, runner: MysqlQueryRunne
 export async function createProject(input: CreateProjectInput, runner?: MysqlQueryRunner): Promise<ProjectRecord> {
   const title = requireTrimmed(input.title, "标题不能为空");
   const sourceText = requireNonBlank(input.sourceText, "小说正文不能为空");
-  const ownerUserId = input.ownerUserId ?? null;
   const id = randomUUID();
   const status: ProjectStatus = "draft";
   const createdAtDate = new Date();
@@ -177,14 +169,13 @@ export async function createProject(input: CreateProjectInput, runner?: MysqlQue
   const updatedAt = createdAt;
 
   await resolveRunner(runner).query<ResultSetHeader>(
-    `INSERT INTO projects (id, owner_user_id, title, source_text, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, ownerUserId, title, sourceText, status, createdAtDate, createdAtDate]
+    `INSERT INTO projects (id, title, source_text, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, title, sourceText, status, createdAtDate, createdAtDate]
   );
 
   return {
     id,
-    ownerUserId,
     title,
     sourceText,
     status,
@@ -193,14 +184,11 @@ export async function createProject(input: CreateProjectInput, runner?: MysqlQue
   };
 }
 
-export async function listProjectsForUser(ownerUserId: string, runner?: MysqlQueryRunner): Promise<ProjectListItem[]> {
-  const userId = requireTrimmed(ownerUserId, "ownerUserId 不能为空");
+export async function listProjects(runner?: MysqlQueryRunner): Promise<ProjectListItem[]> {
   const [rows] = await resolveRunner(runner).query<ProjectRow[]>(
-    `SELECT id, owner_user_id, title, source_text, status, created_at, updated_at
+    `SELECT id, title, source_text, status, created_at, updated_at
      FROM projects
-     WHERE owner_user_id = ?
-     ORDER BY updated_at DESC`,
-    [userId]
+     ORDER BY updated_at DESC`
   );
 
   return rows.map(mapProjectRow).map(({ id, title, status, createdAt, updatedAt }) => ({
@@ -212,18 +200,14 @@ export async function listProjectsForUser(ownerUserId: string, runner?: MysqlQue
   }));
 }
 
-export async function getProjectForUser(
-  projectId: string,
-  ownerUserId: string,
-  runner?: MysqlQueryRunner
-): Promise<ProjectDetail | null> {
+export async function getProject(projectId: string, runner?: MysqlQueryRunner): Promise<ProjectDetail | null> {
   const db = resolveRunner(runner);
   const [rows] = await db.query<ProjectRow[]>(
-    `SELECT id, owner_user_id, title, source_text, status, created_at, updated_at
+    `SELECT id, title, source_text, status, created_at, updated_at
      FROM projects
-     WHERE id = ? AND owner_user_id = ?
+     WHERE id = ?
      LIMIT 1`,
-    [requireTrimmed(projectId, "projectId 不能为空"), requireTrimmed(ownerUserId, "ownerUserId 不能为空")]
+    [requireTrimmed(projectId, "projectId 不能为空")]
   );
   if (!rows[0]) {
     return null;
@@ -235,9 +219,8 @@ export async function getProjectForUser(
   };
 }
 
-export async function updateProjectForUser(input: UpdateProjectInput, runner?: MysqlQueryRunner): Promise<ProjectRecord> {
+export async function updateProject(input: UpdateProjectInput, runner?: MysqlQueryRunner): Promise<ProjectRecord> {
   const projectId = requireTrimmed(input.projectId, "projectId 不能为空");
-  const ownerUserId = requireTrimmed(input.ownerUserId, "ownerUserId 不能为空");
   const title = requireTrimmed(input.title, "标题不能为空");
   const sourceText = requireNonBlank(input.sourceText, "小说正文不能为空");
   const updatedAtDate = new Date();
@@ -245,14 +228,14 @@ export async function updateProjectForUser(input: UpdateProjectInput, runner?: M
   const [result] = await resolveRunner(runner).query<ResultSetHeader>(
     `UPDATE projects
      SET title = ?, source_text = ?, updated_at = ?
-     WHERE id = ? AND owner_user_id = ?`,
-    [title, sourceText, updatedAtDate, projectId, ownerUserId]
+     WHERE id = ?`,
+    [title, sourceText, updatedAtDate, projectId]
   );
   if (result.affectedRows !== 1) {
     throw new Error("项目不存在");
   }
 
-  const detail = await getProjectForUser(projectId, ownerUserId, runner);
+  const detail = await getProject(projectId, runner);
   if (!detail) {
     throw new Error("项目不存在");
   }
@@ -264,21 +247,13 @@ function joinValidationErrors(validation: Extract<ScriptValidationResult, { ok: 
   return validation.errors.map((error) => `${error.path}: ${error.message}`).join("; ");
 }
 
-async function requireProjectWritable(
-  projectId: string,
-  ownerUserId: string | undefined,
-  runner: MysqlQueryRunner
-): Promise<void> {
-  if (!ownerUserId) {
-    return;
-  }
-
+async function requireProjectExists(projectId: string, runner: MysqlQueryRunner): Promise<void> {
   const [rows] = await runner.query<RowDataPacket[]>(
     `SELECT id
      FROM projects
-     WHERE id = ? AND owner_user_id = ?
+     WHERE id = ?
      LIMIT 1`,
-    [projectId, ownerUserId]
+    [projectId]
   );
   if (rows.length !== 1) {
     throw new Error("项目不存在");
@@ -300,7 +275,7 @@ export async function createScriptVersion(
   const createdAtDate = new Date();
   const createdAt = createdAtDate.toISOString();
   const db = resolveTransactionRunner(runner);
-  await requireProjectWritable(projectId, input.ownerUserId, db);
+  await requireProjectExists(projectId, db);
   const connection: MysqlTransactionConnection = await db.getConnection();
 
   try {
@@ -346,7 +321,7 @@ export async function recordGenerationRun(
   const errorMessage = input.errorMessage ?? null;
   const db = resolveRunner(runner);
 
-  await requireProjectWritable(projectId, input.ownerUserId, db);
+  await requireProjectExists(projectId, db);
 
   await db.query<ResultSetHeader>(
     `INSERT INTO generation_runs (id, project_id, provider, model, status, error_message, created_at)

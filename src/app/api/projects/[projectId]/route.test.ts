@@ -1,20 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { readCurrentUser } from "@/app/api/_auth";
-import { getProjectForUser, updateProjectForUser } from "@/lib/server/projects";
+import { getProject, updateProject } from "@/lib/server/projects";
 import { GET, PATCH } from "./route";
 
-vi.mock("@/app/api/_auth", () => ({
-  readCurrentUser: vi.fn()
-}));
-
 vi.mock("@/lib/server/projects", () => ({
-  getProjectForUser: vi.fn(),
-  updateProjectForUser: vi.fn()
+  getProject: vi.fn(),
+  updateProject: vi.fn()
 }));
 
-const readCurrentUserMock = vi.mocked(readCurrentUser);
-const getProjectForUserMock = vi.mocked(getProjectForUser);
-const updateProjectForUserMock = vi.mocked(updateProjectForUser);
+const getProjectMock = vi.mocked(getProject);
+const updateProjectMock = vi.mocked(updateProject);
 
 function context(projectId = "project-1") {
   return { params: Promise.resolve({ projectId }) };
@@ -30,27 +24,13 @@ function jsonRequest(body: unknown): Request {
 
 describe("/api/projects/[projectId]", () => {
   beforeEach(() => {
-    readCurrentUserMock.mockReset();
-    getProjectForUserMock.mockReset();
-    updateProjectForUserMock.mockReset();
+    getProjectMock.mockReset();
+    updateProjectMock.mockReset();
   });
 
-  it("requires login before loading project detail", async () => {
-    readCurrentUserMock.mockResolvedValue(null);
-
-    const response = await GET(new Request("http://localhost/api/projects/project-1"), context());
-    const body = await response.json();
-
-    expect(response.status).toBe(401);
-    expect(body.error).toBe("请先登录");
-    expect(getProjectForUserMock).not.toHaveBeenCalled();
-  });
-
-  it("loads only the current user's project", async () => {
-    readCurrentUserMock.mockResolvedValue({ id: "user-1", email: "author@example.com", name: "作者" });
-    getProjectForUserMock.mockResolvedValue({
+  it("loads a project draft", async () => {
+    getProjectMock.mockResolvedValue({
       id: "project-1",
-      ownerUserId: "user-1",
       title: "雨夜来信",
       sourceText: "正文",
       status: "generated",
@@ -63,13 +43,12 @@ describe("/api/projects/[projectId]", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.project).toMatchObject({ id: "project-1", ownerUserId: "user-1" });
-    expect(getProjectForUserMock).toHaveBeenCalledWith("project-1", "user-1");
+    expect(body.project).toMatchObject({ id: "project-1", title: "雨夜来信" });
+    expect(getProjectMock).toHaveBeenCalledWith("project-1");
   });
 
-  it("returns 404 for projects not owned by the current user", async () => {
-    readCurrentUserMock.mockResolvedValue({ id: "user-2", email: "other@example.com", name: "其他作者" });
-    getProjectForUserMock.mockResolvedValue(null);
+  it("returns 404 when the project does not exist", async () => {
+    getProjectMock.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost/api/projects/project-1"), context());
     const body = await response.json();
@@ -78,11 +57,9 @@ describe("/api/projects/[projectId]", () => {
     expect(body.error).toBe("项目不存在");
   });
 
-  it("updates only the current user's project", async () => {
-    readCurrentUserMock.mockResolvedValue({ id: "user-1", email: "author@example.com", name: "作者" });
-    updateProjectForUserMock.mockResolvedValue({
+  it("updates a project draft", async () => {
+    updateProjectMock.mockResolvedValue({
       id: "project-1",
-      ownerUserId: "user-1",
       title: "新标题",
       sourceText: "新正文",
       status: "draft",
@@ -95,11 +72,26 @@ describe("/api/projects/[projectId]", () => {
 
     expect(response.status).toBe(200);
     expect(body.project.title).toBe("新标题");
-    expect(updateProjectForUserMock).toHaveBeenCalledWith({
+    expect(updateProjectMock).toHaveBeenCalledWith({
       projectId: "project-1",
-      ownerUserId: "user-1",
       title: "新标题",
       sourceText: "新正文"
     });
+  });
+
+  it("returns 400 for invalid JSON", async () => {
+    const response = await PATCH(
+      new Request("http://localhost/api/projects/project-1", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: "{bad json"
+      }),
+      context()
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("请求体必须是 JSON");
+    expect(updateProjectMock).not.toHaveBeenCalled();
   });
 });

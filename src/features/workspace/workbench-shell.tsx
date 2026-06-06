@@ -2,41 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useEffect, useState, useTransition } from "react";
-import { fetchCurrentUser, logout, type UserSummary } from "@/features/auth/auth-client";
+import type { ReactNode } from "react";
 import { getActiveWorkbenchRoute, WORKBENCH_NAV_ITEMS } from "./workbench-nav";
 
 export function WorkbenchShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const activeRoute = getActiveWorkbenchRoute(pathname);
-  const [user, setUser] = useState<UserSummary | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    let ignore = false;
-    fetchCurrentUser()
-      .then((currentUser) => {
-        if (!ignore) {
-          setUser(currentUser);
-        }
-      })
-      .catch(() => {
-        if (!ignore) {
-          setUser(null);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  function handleLogout() {
-    startTransition(async () => {
-      await logout();
-      setUser(null);
-    });
-  }
 
   return (
     <>
@@ -56,27 +27,6 @@ export function WorkbenchShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          <div className={user ? "nav-account signed-in" : "nav-account guest"}>
-            {user ? (
-              <>
-                <span className="nav-status" title={user.email}>
-                  {user.email}
-                </span>
-                <button className="ghost-button nav-auth-button" type="button" disabled={isPending} onClick={handleLogout}>
-                  退出
-                </button>
-              </>
-            ) : (
-              <span className="nav-auth-links">
-                <Link className="login-link" href="/login">
-                  登录
-                </Link>
-                <Link className="register-link" href="/register">
-                  注册
-                </Link>
-              </span>
-            )}
-          </div>
         </div>
       </header>
 

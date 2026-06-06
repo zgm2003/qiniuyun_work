@@ -19,7 +19,7 @@ describe("server projects client", () => {
     vi.unstubAllGlobals();
   });
 
-  it("lists and loads server projects", async () => {
+  it("lists and loads server project drafts", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ projects: [{ id: "project-1", title: "雨夜来信", status: "draft", createdAt: "c", updatedAt: "u" }] }))
@@ -27,7 +27,6 @@ describe("server projects client", () => {
         jsonResponse({
           project: {
             id: "project-1",
-            ownerUserId: "user-1",
             title: "雨夜来信",
             sourceText: "正文",
             status: "draft",
@@ -47,7 +46,7 @@ describe("server projects client", () => {
 
   it("creates, updates, and saves versions without sending model credentials", async () => {
     const fetchMock = vi.fn(async () =>
-      jsonResponse({ project: { id: "project-1", ownerUserId: "user-1", title: "雨夜来信", sourceText: "正文", status: "draft", createdAt: "c", updatedAt: "u", latestVersion: null } })
+      jsonResponse({ project: { id: "project-1", title: "雨夜来信", sourceText: "正文", status: "draft", createdAt: "c", updatedAt: "u", latestVersion: null } })
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -77,8 +76,8 @@ describe("server projects client", () => {
   });
 
   it("throws server error messages", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ error: "请先登录" }, 401)));
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ error: "项目不存在" }, 404)));
 
-    await expect(listServerProjects()).rejects.toThrow("请先登录");
+    await expect(listServerProjects()).rejects.toThrow("项目不存在");
   });
 });

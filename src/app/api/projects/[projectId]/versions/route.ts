@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { readCurrentUser } from "@/app/api/_auth";
 import { createScriptVersion } from "@/lib/server/projects";
 
 const ConversionReportSchema = z.object({
@@ -47,12 +46,10 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const projectId = await readProjectId(context);
-    const user = await readCurrentUser();
     const version = await createScriptVersion({
       projectId,
       yaml: parsed.data.yaml,
-      report: parsed.data.report,
-      ownerUserId: user?.id
+      report: parsed.data.report
     });
     return NextResponse.json({ version }, { status: 201 });
   } catch (error) {

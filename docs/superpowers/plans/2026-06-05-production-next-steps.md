@@ -21,7 +21,7 @@
 
 ## Scope Guard
 
-This plan does not implement AI provider changes, database persistence, auth, RBAC, Redis, deployment automation, or UI changes. It only locks the order of future work.
+This plan does not implement AI provider changes, database persistence, account systems, Redis, deployment automation, or UI changes. It only locks the order of future work.
 
 ### Task 1: Create production next steps roadmap
 
@@ -39,10 +39,10 @@ P0 比赛交付冻结
 P1 真实 AI 生产化配置
 P2 Responses API 与结构化输出
 P3 MySQL 基础持久化
-P4 登录与会话
-P5 简单 RBAC 和管理端骨架
-P6 AI 供应商配置入库
-P7 Redis 与异步任务
+P4 Prompt 模板化
+P5 AI 供应商配置入库
+P6 Redis 与异步任务
+
 下个 AI 窗口接力提示
 当前不要做
 ```

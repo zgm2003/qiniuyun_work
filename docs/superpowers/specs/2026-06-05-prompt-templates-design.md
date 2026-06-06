@@ -14,7 +14,7 @@ P5 不是做 Prompt 市场，也不是做复杂编排。P5 只解决一件事：
 - `script_generation_chat_yaml`：Chat Completions 路径使用，模型直接返回 YAML。
 - `script_generation_responses_json`：Responses 路径使用，模型返回严格 JSON，再由程序转 YAML。
 
-不做任意 JS、条件表达式、循环语法、插件、Prompt 市场、多租户继承、在线编辑 UI、RBAC。模板可以入库，但必须有代码内置默认模板作为 fallback，不能让数据库缺数据导致题目三主线不可用。
+不做任意 JS、条件表达式、循环语法、插件、Prompt 市场、多租户继承或在线编辑 UI。模板可以入库，但必须有代码内置默认模板作为 fallback，不能让数据库缺数据导致题目三主线不可用。
 
 【破坏性分析】
 不能改变题目三主线：3 章以上小说文本 → AI 生成结构化剧本 → YAML 编辑/校验/导出。不能改变现有 YAML 字段语义、`ScriptDocument` Schema、mock provider、`/api/convert` 请求和响应结构。Chat Completions 和 Responses 两条路径的行为只能等价迁移，不能趁机重写输出协议。
@@ -77,7 +77,7 @@ ScriptDocument / YAML Schema 校验
 
 ### 不选方案：现在做 Prompt 管理页面
 
-管理页面会牵扯登录权限、RBAC、审计、回滚、表单校验和发布流程。P5 的真实问题是模板边界和渲染，不是管理端体验。
+管理页面会牵扯审计、回滚、表单校验和发布流程。P5 的真实问题是模板边界和渲染，不是页面体验。
 
 ### 不选方案：引入 Handlebars / Liquid / JS 表达式
 
@@ -215,7 +215,7 @@ P5 不新增管理 API。后续 P7 做管理端时再暴露 CRUD。
 
 P6 才做：AI 供应商配置加密入库。
 
-P7 才做：Prompt 模板管理 UI、RBAC、审计、启停发布。
+后续真实需要时再做：Prompt 模板管理 UI、审计、启停发布。
 
 P5 只把边界打好，不提供用户可编辑入口。
 

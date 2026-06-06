@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { readCurrentUser } from "@/app/api/_auth";
-import { getProjectForUser, updateProjectForUser } from "@/lib/server/projects";
+import { getProject, updateProject } from "@/lib/server/projects";
 
 const UpdateProjectRequestSchema = z.object({
   title: z.string().refine((value) => value.trim().length > 0, "标题不能为空"),
@@ -23,13 +22,8 @@ async function readProjectId(context: RouteContext): Promise<string> {
 }
 
 export async function GET(_request: Request, context: RouteContext) {
-  const user = await readCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
-  }
-
   try {
-    const project = await getProjectForUser(await readProjectId(context), user.id);
+    const project = await getProject(await readProjectId(context));
     if (!project) {
       return NextResponse.json({ error: "项目不存在" }, { status: 404 });
     }
@@ -46,11 +40,6 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const user = await readCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
-  }
-
   let payload: unknown;
   try {
     payload = await request.json();
@@ -64,9 +53,8 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const project = await updateProjectForUser({
+    const project = await updateProject({
       projectId: await readProjectId(context),
-      ownerUserId: user.id,
       title: parsed.data.title,
       sourceText: parsed.data.sourceText
     });

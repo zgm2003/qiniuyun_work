@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { readCurrentUser } from "@/app/api/_auth";
-import { createProject, listProjectsForUser } from "@/lib/server/projects";
+import { createProject, listProjects } from "@/lib/server/projects";
 
 const CreateProjectRequestSchema = z.object({
   title: z.string().refine((value) => value.trim().length > 0, "标题不能为空"),
@@ -9,12 +8,7 @@ const CreateProjectRequestSchema = z.object({
 });
 
 export async function GET() {
-  const user = await readCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
-  }
-
-  const projects = await listProjectsForUser(user.id);
+  const projects = await listProjects();
   return NextResponse.json({ projects });
 }
 
@@ -33,11 +27,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const user = await readCurrentUser();
     const project = await createProject({
       title: parsed.data.title,
-      sourceText: parsed.data.sourceText,
-      ownerUserId: user?.id ?? null
+      sourceText: parsed.data.sourceText
     });
     return NextResponse.json({ project }, { status: 201 });
   } catch {

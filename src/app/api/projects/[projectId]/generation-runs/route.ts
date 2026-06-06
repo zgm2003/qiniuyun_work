@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { readCurrentUser } from "@/app/api/_auth";
 import { recordGenerationRun } from "@/lib/server/projects";
 
 const RecordGenerationRunRequestSchema = z.object({
@@ -40,14 +39,12 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const projectId = await readProjectId(context);
-    const user = await readCurrentUser();
     const run = await recordGenerationRun({
       projectId,
       provider: parsed.data.provider,
       model: parsed.data.model,
       status: parsed.data.status,
-      errorMessage: parsed.data.errorMessage ?? null,
-      ownerUserId: user?.id
+      errorMessage: parsed.data.errorMessage ?? null
     });
     return NextResponse.json({ run }, { status: 201 });
   } catch (error) {

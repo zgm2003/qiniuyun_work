@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add browser-local `.txt` / `.md` novel text import so users can load source material without copy-paste.
+**Goal:** Add browser-local `.txt` / `.md` novel text import so authors can load source material without copy-paste.
 
 **Architecture:** A pure `file-import` module validates import metadata and derives the editor title from the filename. The page reads the selected file in the browser and applies the import result to existing editor state. No upload API, provider, YAML Schema, or storage changes.
 

@@ -1,20 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "./route";
-import { createProject, listProjectsForUser } from "@/lib/server/projects";
-import { readCurrentUser } from "@/app/api/_auth";
+import { createProject, listProjects } from "@/lib/server/projects";
 
 vi.mock("@/lib/server/projects", () => ({
   createProject: vi.fn(),
-  listProjectsForUser: vi.fn()
-}));
-
-vi.mock("@/app/api/_auth", () => ({
-  readCurrentUser: vi.fn()
+  listProjects: vi.fn()
 }));
 
 const createProjectMock = vi.mocked(createProject);
-const listProjectsForUserMock = vi.mocked(listProjectsForUser);
-const readCurrentUserMock = vi.mocked(readCurrentUser);
+const listProjectsMock = vi.mocked(listProjects);
 
 function jsonRequest(body: unknown): Request {
   return new Request("http://localhost/api/projects", {
@@ -24,17 +18,14 @@ function jsonRequest(body: unknown): Request {
   });
 }
 
-describe("POST /api/projects", () => {
+describe("/api/projects", () => {
   beforeEach(() => {
     createProjectMock.mockReset();
-    listProjectsForUserMock.mockReset();
-    readCurrentUserMock.mockReset();
-    readCurrentUserMock.mockResolvedValue(null);
+    listProjectsMock.mockReset();
   });
 
-  it("returns current user's projects", async () => {
-    readCurrentUserMock.mockResolvedValue({ id: "user-1", email: "author@example.com", name: "作者" });
-    listProjectsForUserMock.mockResolvedValue([
+  it("returns all server project drafts", async () => {
+    listProjectsMock.mockResolvedValue([
       {
         id: "project-1",
         title: "雨夜来信",
@@ -49,24 +40,12 @@ describe("POST /api/projects", () => {
 
     expect(response.status).toBe(200);
     expect(body.projects).toHaveLength(1);
-    expect(listProjectsForUserMock).toHaveBeenCalledWith("user-1");
+    expect(listProjectsMock).toHaveBeenCalledWith();
   });
 
-  it("requires login before listing projects", async () => {
-    readCurrentUserMock.mockResolvedValue(null);
-
-    const response = await GET();
-    const body = await response.json();
-
-    expect(response.status).toBe(401);
-    expect(body.error).toBe("请先登录");
-    expect(listProjectsForUserMock).not.toHaveBeenCalled();
-  });
-
-  it("creates a project", async () => {
+  it("creates a project draft", async () => {
     createProjectMock.mockResolvedValue({
       id: "project-1",
-      ownerUserId: null,
       title: "雨夜来信",
       sourceText: "第1章 A\n正文",
       status: "draft",
@@ -86,30 +65,7 @@ describe("POST /api/projects", () => {
     expect(body.project).toMatchObject({ id: "project-1", title: "雨夜来信" });
     expect(createProjectMock).toHaveBeenCalledWith({
       title: " 雨夜来信 ",
-      sourceText: "第1章 A\n正文",
-      ownerUserId: null
-    });
-  });
-
-  it("binds created projects to the logged-in user", async () => {
-    readCurrentUserMock.mockResolvedValue({ id: "user-1", email: "author@example.com", name: "作者" });
-    createProjectMock.mockResolvedValue({
-      id: "project-1",
-      ownerUserId: "user-1",
-      title: "雨夜来信",
-      sourceText: "第1章 A\n正文",
-      status: "draft",
-      createdAt: "2026-06-05T01:00:00.000Z",
-      updatedAt: "2026-06-05T01:00:00.000Z"
-    });
-
-    const response = await POST(jsonRequest({ title: "雨夜来信", sourceText: "第1章 A\n正文" }));
-
-    expect(response.status).toBe(201);
-    expect(createProjectMock).toHaveBeenCalledWith({
-      title: "雨夜来信",
-      sourceText: "第1章 A\n正文",
-      ownerUserId: "user-1"
+      sourceText: "第1章 A\n正文"
     });
   });
 

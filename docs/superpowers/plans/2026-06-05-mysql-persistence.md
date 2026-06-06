@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add the first production MySQL persistence layer for projects, YAML script versions, and generation run records without replacing localStorage or adding Redis/Auth/RBAC.
+**Goal:** Add the first production MySQL persistence layer for projects, YAML script versions, and generation run records without replacing localStorage or adding Redis/account systems.
 
 **Architecture:** Keep SQL isolated in a small database adapter, keep business rules in `src/lib/server/projects.ts`, and keep API routes as validation/response wrappers. Use current YAML Schema as the hard contract and store whole YAML versions instead of prematurely splitting scenes/dialogue/characters.
 
@@ -503,7 +503,7 @@ Document:
 - P3 has MySQL foundation.
 - `src/lib/db/schema.sql` initializes tables.
 - localStorage drafts remain for browser draft workflow.
-- Redis/Auth/RBAC are still later phases.
+- Redis and account systems are still out of scope.
 
 - [ ] **Step 3: Update production roadmap**
 
@@ -550,7 +550,7 @@ Expected: all pass.
 Confirm:
 
 - No Redis code added.
-- No Auth/RBAC code added.
+- No account-system code added.
 - Script version insert and project status update use one transaction.
 - `sourceText` blank input is tested and rejected.
 - `generation_runs` has a real API boundary, while `/api/convert` remains unchanged.

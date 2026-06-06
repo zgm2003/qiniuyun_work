@@ -23,7 +23,7 @@
 - Modify: `src/features/workspace/workspace-context.tsx`
   - Responsibility: Expose non-sensitive UI mode only; server route remains the enforcement boundary and omits request API Key/Base URL/model in production.
 - Modify: `src/features/workspace/workspace-page.tsx`
-  - Responsibility: Hide production-sensitive provider fields from normal users.
+  - Responsibility: Hide production-sensitive provider fields from browser clients.
 - Modify: `.env.example`
   - Responsibility: Document server-owned OpenAI-compatible configuration.
 - Modify: `README.md`
@@ -33,7 +33,7 @@
 
 ## Scope Guard
 
-This PR does not migrate to Responses API, does not add MySQL, does not add Redis, does not add auth/RBAC, and does not add admin provider settings. Those remain later PRs.
+This PR does not migrate to Responses API, does not add MySQL, does not add Redis, and does not add platform provider settings. Those remain later PRs.
 
 ### Task 1: Backend production AI policy
 

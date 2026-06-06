@@ -115,7 +115,7 @@ export function WorkspacePage() {
             {workspace.isProductionRuntime ? (
               <div className="model-live-fields" aria-label="生产模型配置说明">
                 <p className="model-list-message">
-                  使用服务端 AI 配置。普通用户不能查看或覆盖 API Key、Base URL 和 model；当前目标模型由服务端配置决定。
+                  使用服务端 AI 配置。浏览器端不能查看或覆盖 API Key、Base URL 和 model；当前目标模型由服务端配置决定。
                 </p>
               </div>
             ) : (

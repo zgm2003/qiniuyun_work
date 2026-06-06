@@ -140,4 +140,4 @@ npm run build
 4. Runtime integration tests fail, then provider route tests pass.
 5. Full verification.
 
-No extra UI. No RBAC. No Redis. No provider strategy abstraction.
+No extra UI. No account system. No Redis. No provider strategy abstraction.

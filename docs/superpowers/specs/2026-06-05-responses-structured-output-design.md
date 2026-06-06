@@ -9,7 +9,7 @@
 把“模型输出协议”从自由 YAML 改成严格 JSON 对象，再由程序转换为 YAML。用户仍看到和导出 YAML；模型不再直接负责 YAML 排版。
 
 【复杂度检查】
-本阶段只迁移生成路径，不接 MySQL、Redis、登录、RBAC、管理端，也不拆数据库表。不要把 Responses API、持久化、异步任务混成一个 PR。
+本阶段只迁移生成路径，不接 MySQL、Redis、账号体系、平台配置页面，也不拆数据库表。不要把 Responses API、持久化、异步任务混成一个 PR。
 
 【破坏性分析】
 不能破坏题目三主线：3 章以上小说输入 → 结构化剧本 → YAML 编辑/校验/导出。已有 YAML Schema 字段语义不变，旧样例和 mock 转换器仍可用于测试、CI 和离线演示。
@@ -209,7 +209,7 @@ P2 不做：
 
 - 不接 MySQL。
 - 不接 Redis。
-- 不做登录/Auth/RBAC。
+- 不做账号体系。
 - 不做管理端供应商配置。
 - 不做 streaming。
 - 不做 function calling。
@@ -224,4 +224,4 @@ P2 不做：
 3. `npm test`、`npm run lint`、`npm run build` 通过。
 4. P1 的生产安全边界仍成立：浏览器不能覆盖 API Key/Base URL/model。
 5. mock provider 仍只用于测试、CI 和离线样例。
-6. 文档明确：P2 是生成稳定性升级，不是数据库或权限系统升级。
+6. 文档明确：P2 是生成稳定性升级，不是数据库或账号体系升级。

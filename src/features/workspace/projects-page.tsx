@@ -64,7 +64,7 @@ export function ProjectsPage() {
         <div>
           <p className="eyebrow">Server Projects</p>
           <h1>服务端项目</h1>
-          <p className="lead">登录后保存和加载自己的小说改编项目。未登录仍可使用本地草稿和 YAML 导出。</p>
+          <p className="lead">保存和加载服务端项目草稿，便于继续打磨小说改编剧本。</p>
         </div>
         <button className="primary-button" type="button" onClick={() => void saveCurrentWorkspace()}>
           保存当前工作区

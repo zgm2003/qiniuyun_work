@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add browser-local project drafts so users can save, reload, and delete novel-to-script work during demos without a backend.
+**Goal:** Add browser-local project drafts so authors can save, reload, and delete novel-to-script work during demos without a backend.
 
 **Architecture:** Draft persistence is a small versioned localStorage module. The page owns the current editor state and calls the module from event handlers/effects. API keys and model config are deliberately excluded from drafts.
 

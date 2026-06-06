@@ -14,7 +14,6 @@ export type ServerScriptVersion = {
 };
 
 export type ServerProjectDetail = ServerProjectListItem & {
-  ownerUserId: string | null;
   sourceText: string;
   latestVersion: ServerScriptVersion | null;
 };
