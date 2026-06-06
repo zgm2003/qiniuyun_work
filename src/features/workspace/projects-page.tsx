@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWorkspace } from "./workspace-context";
 import { listServerProjects, loadServerProject, type ServerProjectListItem } from "./server-projects-client";
+import { formatGenerationRunSummary, getGenerationRunTone } from "./generation-run-presenter";
 
 export function ProjectsPage() {
   const router = useRouter();
@@ -82,6 +83,13 @@ export function ProjectsPage() {
               <p>
                 {new Date(project.updatedAt).toLocaleString("zh-CN")} · {project.status}
               </p>
+              {project.latestGenerationRun ? (
+                <p className={`generation-run-line ${getGenerationRunTone(project.latestGenerationRun.status)}`}>
+                  最近生成：{formatGenerationRunSummary(project.latestGenerationRun)}
+                </p>
+              ) : (
+                <p className="generation-run-line neutral">暂无生成记录</p>
+              )}
             </div>
             <button className="ghost-button" type="button" onClick={() => void openProject(project.id)}>
               打开
