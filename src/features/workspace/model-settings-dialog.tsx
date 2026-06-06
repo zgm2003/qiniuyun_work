@@ -14,13 +14,18 @@ export function ModelSettingsDialog({ defaultOpen = false }: ModelSettingsDialog
   const workspace = useWorkspace();
   const [open, setOpen] = useState(defaultOpen);
 
+  function openSettings() {
+    setOpen(true);
+    void workspace.loadProviderSettingsFromServer();
+  }
+
   return (
     <>
       <button
         className="model-settings-trigger"
         type="button"
         aria-label="打开模型设置"
-        onClick={() => setOpen(true)}
+        onClick={openSettings}
       >
         <span className="model-settings-trigger-icon">
           <GearIcon />
@@ -31,10 +36,15 @@ export function ModelSettingsDialog({ defaultOpen = false }: ModelSettingsDialog
       <UiDialog
         open={open}
         title="模型设置"
-        description="主流程只负责小说转 YAML；默认使用服务端 AI 配置，本地调试时可临时覆盖。"
+        description="主流程只负责小说转 YAML；这里读取并保存数据库 AI 配置，API Key 加密入库且不回显。"
         onClose={() => setOpen(false)}
       >
-        <div className="model-settings-form">
+        {workspace.isProviderSettingsLoading ? (
+          <div className="model-settings-form">
+            <p className="model-list-message">正在读取数据库里的模型配置...</p>
+          </div>
+        ) : (
+          <div className="model-settings-form">
           <div className="model-grid">
             <UiSelect
               label="Provider"
@@ -111,13 +121,13 @@ export function ModelSettingsDialog({ defaultOpen = false }: ModelSettingsDialog
               </p>
 
               <label>
-                <span>API Key（仅本次请求）</span>
+                <span>API Key</span>
                 <input
                   className="compact-input sensitive-input"
                   type="password"
                   value={workspace.apiKey}
                   onChange={(event) => workspace.setApiKey(event.target.value)}
-                  placeholder="不会保存到本地草稿或仓库"
+                  placeholder="已保存的 API Key 不会回显；填写新 Key 会加密覆盖"
                 />
               </label>
 
@@ -146,6 +156,7 @@ export function ModelSettingsDialog({ defaultOpen = false }: ModelSettingsDialog
             </div>
           )}
         </div>
+        )}
       </UiDialog>
     </>
   );

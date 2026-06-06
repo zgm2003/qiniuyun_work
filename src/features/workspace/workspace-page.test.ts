@@ -66,7 +66,9 @@ describe("WorkspacePage model configuration", () => {
 
     expect(markup).toContain('role="dialog"');
     expect(markup).not.toContain('class="section-kicker"');
-    expect(markup).toContain("API Key（仅本次请求）");
+    expect(markup).toContain("API Key");
+    expect(markup).not.toContain("API Key（仅本次请求）");
+    expect(markup).toContain("已保存的 API Key 不会回显");
     expect(markup).toContain(">Base URL<");
     expect(markup).toContain("获取模型");
     expect(markup).toContain("保存到数据库");

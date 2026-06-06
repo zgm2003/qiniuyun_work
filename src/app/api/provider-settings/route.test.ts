@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { POST } from "./route";
-import { saveAIProviderSettings } from "@/lib/server/ai-provider-settings";
+import { GET, POST } from "./route";
+import { getDefaultAIProviderSettings, saveAIProviderSettings } from "@/lib/server/ai-provider-settings";
 
 vi.mock("@/lib/server/ai-provider-settings", () => ({
+  getDefaultAIProviderSettings: vi.fn(),
   saveAIProviderSettings: vi.fn()
 }));
 
+const getDefaultAIProviderSettingsMock = vi.mocked(getDefaultAIProviderSettings);
 const saveAIProviderSettingsMock = vi.mocked(saveAIProviderSettings);
 
 function jsonRequest(body: unknown): Request {
@@ -18,6 +20,7 @@ function jsonRequest(body: unknown): Request {
 
 describe("POST /api/provider-settings", () => {
   beforeEach(() => {
+    getDefaultAIProviderSettingsMock.mockReset();
     saveAIProviderSettingsMock.mockReset();
   });
 
@@ -90,5 +93,57 @@ describe("POST /api/provider-settings", () => {
     expect(response.status).toBe(500);
     expect(body.error).toBe("AI_CONFIG_MASTER_KEY 未配置");
     expect(JSON.stringify(body)).not.toContain("sk-live-secret");
+  });
+});
+
+describe("GET /api/provider-settings", () => {
+  beforeEach(() => {
+    getDefaultAIProviderSettingsMock.mockReset();
+    saveAIProviderSettingsMock.mockReset();
+  });
+
+  it("returns the default database provider and model without secret material", async () => {
+    getDefaultAIProviderSettingsMock.mockResolvedValue({
+      id: "provider-1",
+      name: "OpenAI Compatible",
+      driver: "openai-compatible",
+      baseUrl: "https://lingsuan.top/v1",
+      status: "enabled",
+      isDefault: true,
+      healthStatus: "unknown",
+      healthMessage: null,
+      lastHealthCheckedAt: null,
+      hasApiKey: true,
+      defaultModel: "gpt-5.5",
+      createdAt: "2026-06-06T01:00:00.000Z",
+      updatedAt: "2026-06-06T01:00:00.000Z"
+    });
+
+    const response = await GET();
+    const body = await response.json();
+    const serializedBody = JSON.stringify(body);
+
+    expect(response.status).toBe(200);
+    expect(body.provider).toMatchObject({
+      id: "provider-1",
+      provider: "openai-compatible",
+      baseUrl: "https://lingsuan.top/v1",
+      model: "gpt-5.5",
+      hasApiKey: true
+    });
+    expect(serializedBody).not.toContain("api_key_ciphertext");
+    expect(serializedBody).not.toContain("api_key_iv");
+    expect(serializedBody).not.toContain("api_key_auth_tag");
+    expect(serializedBody).not.toContain("sk-");
+  });
+
+  it("returns null when no database provider is configured", async () => {
+    getDefaultAIProviderSettingsMock.mockResolvedValue(null);
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.provider).toBeNull();
   });
 });

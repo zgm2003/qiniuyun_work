@@ -35,6 +35,10 @@ export type AIProviderSettingsView = {
   updatedAt: string;
 };
 
+export type DefaultAIProviderSettingsView = AIProviderSettingsView & {
+  defaultModel: string;
+};
+
 export type RuntimeAIProviderConfig = {
   provider: "openai-compatible";
   apiKey: string;
@@ -291,6 +295,36 @@ export async function getAIProviderSettings(
   );
 
   return rows[0] ? mapProviderRow(rows[0]) : null;
+}
+
+
+export async function getDefaultAIProviderSettings(
+  runner?: MysqlQueryRunner
+): Promise<DefaultAIProviderSettingsView | null> {
+  const [rows] = await resolveRunner(runner).query<Array<AIProviderRow & { default_model: string }>>(
+    `SELECT providers.id, providers.name, providers.driver, providers.base_url,
+            providers.api_key_ciphertext, providers.api_key_iv, providers.api_key_auth_tag, providers.api_key_version,
+            providers.status, providers.is_default, providers.health_status, providers.health_message,
+            providers.last_health_checked_at, providers.created_at, providers.updated_at,
+            models.model_id AS default_model
+     FROM ai_providers providers
+     INNER JOIN ai_provider_models models ON models.provider_id = providers.id
+     WHERE providers.status = 'enabled'
+       AND providers.is_default = 1
+       AND models.enabled = 1
+       AND models.is_default = 1
+     ORDER BY providers.updated_at DESC, models.updated_at DESC
+     LIMIT 1`
+  );
+  const row = rows[0];
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...mapProviderRow(row),
+    defaultModel: row.default_model
+  };
 }
 
 export async function resolveRuntimeAIProviderConfig(

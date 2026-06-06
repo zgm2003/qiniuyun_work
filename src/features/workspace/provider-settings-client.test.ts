@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { saveProviderSettings } from "./provider-settings-client";
+import { loadProviderSettings, saveProviderSettings } from "./provider-settings-client";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -9,6 +9,31 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe("provider settings client", () => {
+  test("loads the default database provider settings without API key material", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({
+        provider: {
+          id: "provider-1",
+          provider: "openai-compatible",
+          name: "OpenAI Compatible",
+          baseUrl: "https://lingsuan.top/v1",
+          model: "gpt-5.5",
+          hasApiKey: true
+        }
+      })
+    );
+
+    await expect(loadProviderSettings(fetchImpl)).resolves.toEqual({
+      id: "provider-1",
+      provider: "openai-compatible",
+      name: "OpenAI Compatible",
+      baseUrl: "https://lingsuan.top/v1",
+      model: "gpt-5.5",
+      hasApiKey: true
+    });
+    expect(fetchImpl).toHaveBeenCalledWith("/api/provider-settings", { method: "GET" });
+  });
+
   test("posts provider settings to the database-backed API", async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ provider: { id: "provider-1", hasApiKey: true } }, 201));
 

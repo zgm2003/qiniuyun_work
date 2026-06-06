@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, type ReactNode, useContext, useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { buildChapterOutline } from "@/lib/chapter-outline";
 import { parseNovelChapters } from "@/lib/chapters";
 import { SAMPLE_NOVEL, SAMPLE_TITLE } from "@/lib/demo-sample";
@@ -19,7 +19,7 @@ import { buildModelOptions } from "./model-options";
 import { fetchProviderModels } from "./model-list-client";
 import { buildConvertModelConfig, type RuntimeEnvironment } from "./model-request-config";
 import { DEFAULT_PRODUCT_MODEL, DEFAULT_PRODUCT_PROVIDER } from "./provider-options";
-import { saveProviderSettings } from "./provider-settings-client";
+import { loadProviderSettings, saveProviderSettings } from "./provider-settings-client";
 import {
   createServerProject,
   saveServerScriptVersion,
@@ -66,6 +66,7 @@ export type WorkspaceContextValue = {
   isProductionRuntime: boolean;
   isModelListPending: boolean;
   isProviderSettingsPending: boolean;
+  isProviderSettingsLoading: boolean;
   isPending: boolean;
   drafts: LocalProjectDraft[];
   chapters: ReturnType<typeof parseNovelChapters>;
@@ -85,6 +86,7 @@ export type WorkspaceContextValue = {
   loadServerProjectIntoWorkspace: (project: ServerProjectDetail) => void;
   saveCurrentWorkspaceToServer: () => Promise<void>;
   fetchModels: () => Promise<void>;
+  loadProviderSettingsFromServer: () => Promise<void>;
   saveProviderSettingsToServer: () => Promise<void>;
   convert: () => void;
   downloadYaml: () => void;
@@ -194,6 +196,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [providerSettingsMessage, setProviderSettingsMessage] = useState(PROVIDER_SETTINGS_IDLE_MESSAGE);
   const [isModelListPending, setIsModelListPending] = useState(false);
   const [isProviderSettingsPending, setIsProviderSettingsPending] = useState(false);
+  const [isProviderSettingsLoading, setIsProviderSettingsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const drafts = useSyncExternalStore(subscribeLocalDrafts, getLocalDraftsSnapshot, getServerDraftsSnapshot);
 
@@ -327,6 +330,33 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }
 
+
+  const loadProviderSettingsFromServer = useCallback(async () => {
+    if (isProductionRuntime) {
+      return;
+    }
+
+    setIsProviderSettingsLoading(true);
+
+    try {
+      const settings = await loadProviderSettings();
+      if (!settings) {
+        setProviderSettingsMessage(PROVIDER_SETTINGS_IDLE_MESSAGE);
+        return;
+      }
+
+      setProvider(settings.provider);
+      setBaseUrl(settings.baseUrl);
+      setModel(settings.model);
+      setProviderSettingsMessage(`已加载数据库配置：${settings.baseUrl} · ${settings.model}`);
+    } catch (settingsError) {
+      const message = settingsError instanceof Error ? settingsError.message : "AI provider 读取失败";
+      setProviderSettingsMessage(message);
+    } finally {
+      setIsProviderSettingsLoading(false);
+    }
+  }, [isProductionRuntime]);
+
   async function fetchModels() {
     if (isProductionRuntime) {
       setModelIds([]);
@@ -385,7 +415,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         apiKey: trimmedApiKey,
         model: trimmedModel
       });
-      setProviderSettingsMessage("已保存到数据库，后续生产转换会优先使用该配置。");
+      setProviderSettingsMessage(`已保存到数据库：${trimmedBaseUrl} · ${trimmedModel}`);
     } catch (settingsError) {
       const message = settingsError instanceof Error ? settingsError.message : "AI provider 保存失败";
       setError(message);
@@ -496,6 +526,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     isProductionRuntime,
     isModelListPending,
     isProviderSettingsPending,
+    isProviderSettingsLoading,
     isPending,
     drafts,
     chapters,
@@ -515,6 +546,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     loadServerProjectIntoWorkspace,
     saveCurrentWorkspaceToServer,
     fetchModels,
+    loadProviderSettingsFromServer,
     saveProviderSettingsToServer,
     convert,
     downloadYaml,
