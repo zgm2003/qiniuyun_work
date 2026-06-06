@@ -22,7 +22,7 @@ describe("server projects client", () => {
   it("lists and loads server project drafts", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ projects: [{ id: "project-1", title: "雨夜来信", status: "draft", createdAt: "c", updatedAt: "u" }] }))
+      .mockResolvedValueOnce(jsonResponse({ projects: [{ id: "project-1", title: "雨夜来信", status: "draft", createdAt: "c", updatedAt: "u", latestGenerationRun: null }] }))
       .mockResolvedValueOnce(
         jsonResponse({
           project: {
@@ -38,7 +38,9 @@ describe("server projects client", () => {
       );
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(listServerProjects()).resolves.toEqual([{ id: "project-1", title: "雨夜来信", status: "draft", createdAt: "c", updatedAt: "u" }]);
+    await expect(listServerProjects()).resolves.toEqual([
+      { id: "project-1", title: "雨夜来信", status: "draft", createdAt: "c", updatedAt: "u", latestGenerationRun: null }
+    ]);
     await expect(loadServerProject("project-1")).resolves.toMatchObject({ id: "project-1", sourceText: "正文" });
     expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/projects", { cache: "no-store" });
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/projects/project-1", { cache: "no-store" });

@@ -31,7 +31,16 @@ describe("/api/projects", () => {
         title: "雨夜来信",
         status: "generated",
         createdAt: "2026-06-05T01:00:00.000Z",
-        updatedAt: "2026-06-05T02:00:00.000Z"
+        updatedAt: "2026-06-05T02:00:00.000Z",
+        latestGenerationRun: {
+          id: "run-1",
+          projectId: "project-1",
+          provider: "openai-compatible",
+          model: "cheap-model",
+          status: "succeeded",
+          errorMessage: null,
+          createdAt: "2026-06-05T02:10:00.000Z"
+        }
       }
     ]);
 
@@ -40,6 +49,7 @@ describe("/api/projects", () => {
 
     expect(response.status).toBe(200);
     expect(body.projects).toHaveLength(1);
+    expect(body.projects[0].latestGenerationRun).toMatchObject({ model: "cheap-model", status: "succeeded" });
     expect(listProjectsMock).toHaveBeenCalledWith();
   });
 
