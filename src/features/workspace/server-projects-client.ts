@@ -1,21 +1,17 @@
 import type { ConversionReport } from "@/lib/mock-converter";
+import type { GenerationRunSummary } from "@/lib/server/projects";
 
-export type ServerGenerationRunSummary = {
-  id: string;
-  projectId: string;
-  provider: "mock" | "openai-compatible";
-  model: string;
-  status: "running" | "succeeded" | "failed";
-  errorMessage: string | null;
-  createdAt: string;
-};
+export type ServerGenerationRunSummary = GenerationRunSummary;
 
-export type ServerProjectListItem = {
+type ServerProjectBase = {
   id: string;
   title: string;
   status: "draft" | "generated" | "failed";
   createdAt: string;
   updatedAt: string;
+};
+
+export type ServerProjectListItem = ServerProjectBase & {
   latestGenerationRun: ServerGenerationRunSummary | null;
 };
 
@@ -24,7 +20,7 @@ export type ServerScriptVersion = {
   report: ConversionReport;
 };
 
-export type ServerProjectDetail = ServerProjectListItem & {
+export type ServerProjectDetail = ServerProjectBase & {
   sourceText: string;
   latestVersion: ServerScriptVersion | null;
 };
