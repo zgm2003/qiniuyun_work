@@ -8,6 +8,7 @@ import {
 } from "./script-schema";
 import { scriptDocumentToValidatedYaml } from "./script-yaml";
 import { buildScriptPromptVariables, renderPromptTemplate } from "./prompt-templates";
+import { resolveRuntimeAIProviderConfig, type RuntimeAIProviderConfig } from "./server/ai-provider-settings";
 import { getPromptTemplateByKey } from "./server/prompt-templates";
 import {
   convertNovelToScript,
@@ -30,6 +31,12 @@ export type RequestModelConfig = {
 
 const DEFAULT_MODEL = "gpt-5.5";
 type OpenAICompatibleGenerationApi = "chat-completions" | "responses";
+type OpenAICompatibleRequestConfig = {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  temperature: number;
+};
 
 function stripYamlFence(content: string): string {
   const trimmed = content.trim();
@@ -145,31 +152,22 @@ function parseResponsesScriptDocument(payload: ResponsesPayload): ScriptDocument
 
 async function convertWithOpenAICompatible(
   input: NovelConversionInput,
-  env: ProviderEnvironment,
   fetchImpl: FetchImplementation,
-  modelConfig?: RequestModelConfig
+  requestConfig: OpenAICompatibleRequestConfig
 ): Promise<NovelConversionResult> {
-  const apiKey = modelConfig?.apiKey || env.OPENAI_COMPATIBLE_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENAI_COMPATIBLE_API_KEY 未配置");
-  }
-
-  const baseUrl = normalizeOpenAIBaseUrl(modelConfig?.baseUrl ?? env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_OPENAI_BASE_URL);
-  const model = modelConfig?.model ?? env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_MODEL;
-  const temperature = modelConfig?.temperature ?? 0.2;
   const promptVariables = buildScriptPromptVariables(input);
   const promptTemplate = await getPromptTemplateByKey("script_generation_chat_yaml");
   const userPrompt = renderPromptTemplate(promptTemplate.userPromptTemplate, promptVariables);
-  const response = await fetchImpl(`${baseUrl}/chat/completions`, {
+  const response = await fetchImpl(`${requestConfig.baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${apiKey}`,
+      authorization: `Bearer ${requestConfig.apiKey}`,
       "content-type": "application/json"
     },
     body: JSON.stringify({
-      model,
+      model: requestConfig.model,
       store: false,
-      temperature,
+      temperature: requestConfig.temperature,
       messages: [
         {
           role: "system",
@@ -207,31 +205,22 @@ async function convertWithOpenAICompatible(
 
 async function convertWithOpenAIResponses(
   input: NovelConversionInput,
-  env: ProviderEnvironment,
   fetchImpl: FetchImplementation,
-  modelConfig?: RequestModelConfig
+  requestConfig: OpenAICompatibleRequestConfig
 ): Promise<NovelConversionResult> {
-  const apiKey = modelConfig?.apiKey || env.OPENAI_COMPATIBLE_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENAI_COMPATIBLE_API_KEY 未配置");
-  }
-
-  const baseUrl = normalizeOpenAIBaseUrl(modelConfig?.baseUrl ?? env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_OPENAI_BASE_URL);
-  const model = modelConfig?.model ?? env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_MODEL;
-  const temperature = modelConfig?.temperature ?? 0.2;
   const promptVariables = buildScriptPromptVariables(input);
   const promptTemplate = await getPromptTemplateByKey("script_generation_responses_json");
   const userPrompt = renderPromptTemplate(promptTemplate.userPromptTemplate, promptVariables);
-  const response = await fetchImpl(`${baseUrl}/responses`, {
+  const response = await fetchImpl(`${requestConfig.baseUrl}/responses`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${apiKey}`,
+      authorization: `Bearer ${requestConfig.apiKey}`,
       "content-type": "application/json"
     },
     body: JSON.stringify({
-      model,
+      model: requestConfig.model,
       store: false,
-      temperature,
+      temperature: requestConfig.temperature,
       instructions: promptTemplate.systemPrompt,
       input: userPrompt,
       text: {
@@ -259,6 +248,37 @@ async function convertWithOpenAIResponses(
   };
 }
 
+function resolveEnvOpenAIConfig(env: ProviderEnvironment, modelConfig?: RequestModelConfig): OpenAICompatibleRequestConfig {
+  const apiKey = modelConfig?.apiKey ?? env.OPENAI_COMPATIBLE_API_KEY;
+  if (!apiKey || !apiKey.trim()) {
+    throw new Error("OPENAI_COMPATIBLE_API_KEY 未配置");
+  }
+
+  return {
+    apiKey,
+    baseUrl: normalizeOpenAIBaseUrl(modelConfig?.baseUrl ?? env.OPENAI_COMPATIBLE_BASE_URL ?? DEFAULT_OPENAI_BASE_URL),
+    model: modelConfig?.model ?? env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_MODEL,
+    temperature: modelConfig?.temperature ?? 0.2
+  };
+}
+
+async function resolveOpenAIRequestConfig(
+  env: ProviderEnvironment,
+  modelConfig?: RequestModelConfig
+): Promise<OpenAICompatibleRequestConfig> {
+  if (env.NODE_ENV !== "production") {
+    return resolveEnvOpenAIConfig(env, modelConfig);
+  }
+
+  const runtimeConfig: RuntimeAIProviderConfig = await resolveRuntimeAIProviderConfig(undefined, env);
+  return {
+    apiKey: runtimeConfig.apiKey,
+    baseUrl: runtimeConfig.baseUrl,
+    model: runtimeConfig.model,
+    temperature: modelConfig?.temperature ?? 0.2
+  };
+}
+
 export async function convertNovelWithProvider(
   input: NovelConversionInput,
   env: ProviderEnvironment = process.env,
@@ -278,11 +298,12 @@ export async function convertNovelWithProvider(
   }
 
   if (provider === "openai-compatible") {
+    const requestConfig = await resolveOpenAIRequestConfig(env, modelConfig);
     if (resolveGenerationApi(env) === "responses") {
-      return convertWithOpenAIResponses(input, env, fetchImpl, modelConfig);
+      return convertWithOpenAIResponses(input, fetchImpl, requestConfig);
     }
 
-    return convertWithOpenAICompatible(input, env, fetchImpl, modelConfig);
+    return convertWithOpenAICompatible(input, fetchImpl, requestConfig);
   }
 
   throw new Error(`不支持的 AI_PROVIDER：${provider}`);
