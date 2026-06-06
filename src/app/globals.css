@@ -110,12 +110,12 @@ a {
 }
 
 .top-nav-inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   width: min(1480px, calc(100vw - 48px));
   min-height: 68px;
   margin: 0 auto;
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
 }
 
@@ -172,6 +172,7 @@ a {
 }
 
 .top-nav nav {
+  justify-self: center;
   display: flex;
   min-width: 0;
   align-items: center;
@@ -204,10 +205,10 @@ a {
 }
 
 .top-nav-actions {
+  justify-self: end;
   display: flex;
   flex: 0 0 auto;
   gap: 10px;
-  margin-left: auto;
   min-width: 170px;
   justify-content: flex-end;
 }
@@ -2010,6 +2011,7 @@ html.dark input::placeholder {
   }
 
   .top-nav-inner {
+    display: flex;
     min-height: 64px;
     flex-wrap: wrap;
     gap: 10px;

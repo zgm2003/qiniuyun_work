@@ -24,4 +24,10 @@ describe("global CSS guardrails", () => {
     expect(css).not.toContain("scrollbar-width: thin;");
     expect(css).not.toContain("overflow: hidden; /* global scrollbar hide */");
   });
+
+  it("keeps desktop workbench navigation centered in the viewport", () => {
+    expect(css).toContain("grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);");
+    expect(css).toContain(".top-nav nav {\n  justify-self: center;");
+    expect(css).toContain(".top-nav-actions {\n  justify-self: end;");
+  });
 });
