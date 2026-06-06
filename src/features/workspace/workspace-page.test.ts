@@ -3,8 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import { ModelSettingsDialog } from "./model-settings-dialog";
 import { ScriptPage } from "./script-page";
+import { WorkbenchShell } from "./workbench-shell";
 import { WorkspacePage } from "./workspace-page";
 import { WorkspaceProvider } from "./workspace-context";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/workspace"
+}));
 
 function renderWithWorkspaceProvider(nodeEnv: "development" | "production" | "test", element: ReturnType<typeof createElement>): string {
   const originalNodeEnv = process.env.NODE_ENV;
@@ -21,7 +26,7 @@ describe("WorkspacePage model configuration", () => {
   test("keeps model configuration out of the initial workbench flow", () => {
     const markup = renderWithWorkspaceProvider("development", createElement(WorkspacePage));
 
-    expect(markup).toContain("模型设置");
+    expect(markup).not.toContain("模型设置");
     expect(markup).toContain('aria-label="使用步骤"');
     expect(markup).not.toContain('<ol class="grid w-full');
     expect(markup).not.toContain('id="model-config"');
@@ -43,10 +48,24 @@ describe("WorkspacePage model configuration", () => {
     expect(markup).not.toContain("质量报告");
   });
 
+  test("places model settings in the top navigation", () => {
+    const markup = renderWithWorkspaceProvider(
+      "development",
+      createElement(WorkbenchShell, null, createElement(WorkspacePage))
+    );
+
+    expect(markup).toContain('class="top-nav-actions"');
+    expect(markup).toContain("模型设置");
+    expect(markup).toContain("把小说变成 YAML 剧本");
+    expect(markup.indexOf('class="top-nav-actions"')).toBeLessThan(markup.indexOf('class="app-shell"'));
+    expect(markup.match(/class="model-settings-trigger"/g)).toHaveLength(1);
+  });
+
   test("opens development-only request model fields inside the settings dialog", () => {
     const markup = renderWithWorkspaceProvider("development", createElement(ModelSettingsDialog, { defaultOpen: true }));
 
     expect(markup).toContain('role="dialog"');
+    expect(markup).not.toContain('class="section-kicker"');
     expect(markup).toContain("API Key（仅本次请求）");
     expect(markup).toContain(">Base URL<");
     expect(markup).toContain("获取模型");

@@ -21,7 +21,6 @@ export function UiDialog({ open, title, description, children, onClose }: UiDial
       <section className="ui-dialog" role="dialog" aria-modal="true" aria-label={title}>
         <div className="ui-dialog-head">
           <div>
-            <p className="section-kicker">Dialog</p>
             <h2>{title}</h2>
             {description ? <p>{description}</p> : null}
           </div>

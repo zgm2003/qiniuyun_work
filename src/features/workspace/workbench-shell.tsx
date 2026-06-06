@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { ModelSettingsDialog } from "./model-settings-dialog";
 import { getActiveWorkbenchRoute, WORKBENCH_NAV_ITEMS } from "./workbench-nav";
 
 export function WorkbenchShell({ children }: { children: ReactNode }) {
@@ -27,6 +28,9 @@ export function WorkbenchShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
+          <div className="top-nav-actions">
+            <ModelSettingsDialog />
+          </div>
         </div>
       </header>
 

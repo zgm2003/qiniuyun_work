@@ -2,7 +2,6 @@
 
 import { type ChangeEvent, useRef } from "react";
 import Link from "next/link";
-import { ModelSettingsDialog } from "./model-settings-dialog";
 import { useWorkspace } from "./workspace-context";
 
 export function WorkspacePage() {
@@ -57,9 +56,6 @@ export function WorkspacePage() {
             <StepPill index="02" label="检查章节" />
             <StepPill index="03" label="生成 YAML" />
           </div>
-        </div>
-        <div className="flex items-start justify-end">
-          <ModelSettingsDialog />
         </div>
       </div>
 
