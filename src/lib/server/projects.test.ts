@@ -80,6 +80,7 @@ class MissingProjectRunner extends FakeTransactionalRunner {
 }
 
 class FakeProjectStoreRunner implements MysqlQueryRunner {
+  calls: QueryCall[] = [];
   projects: Array<{
     id: string;
     title: string;
@@ -110,6 +111,8 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
     sql: string,
     values: unknown[] = []
   ): Promise<[T, ...unknown[]]> {
+    this.calls.push({ sql, values });
+
     if (sql.includes("INSERT INTO projects")) {
       const [id, title, sourceText, status, createdAt, updatedAt] = values as [string, string, string, "draft", Date, Date];
       this.projects.push({
@@ -132,7 +135,11 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
             .sort((left, right) => right.created_at.getTime() - left.created_at.getTime() || right.id.localeCompare(left.id))[0];
 
           return {
-            ...project,
+            id: project.id,
+            title: project.title,
+            status: project.status,
+            created_at: project.created_at,
+            updated_at: project.updated_at,
             latest_run_id: latestRun?.id ?? null,
             latest_run_project_id: latestRun?.project_id ?? null,
             latest_run_provider: latestRun?.provider ?? null,
@@ -183,8 +190,7 @@ class FakeProjectStoreRunner implements MysqlQueryRunner {
 
 class IncompleteGenerationRunJoinRunner implements MysqlQueryRunner {
   async query<T extends RowDataPacket[] | RowDataPacket[][] | ResultSetHeader>(
-    sql: string,
-    _values: unknown[] = []
+    sql: string
   ): Promise<[T, ...unknown[]]> {
     if (sql.includes("FROM projects p") && sql.includes("LEFT JOIN generation_runs")) {
       return [
@@ -389,6 +395,8 @@ describe("project persistence service", () => {
 
     expect(projects.map((project) => project.title)).toEqual(["项目 B", "项目 A"]);
     expect(projects.map((project) => project.latestGenerationRun)).toEqual([null, null]);
+    const listCall = runner.calls.find((call) => call.sql.includes("FROM projects p") && call.sql.includes("LEFT JOIN generation_runs"));
+    expect(listCall?.sql).not.toContain("source_text");
   });
 
   it("lists projects with the latest generation run summary", async () => {

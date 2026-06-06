@@ -49,11 +49,11 @@ describe("WorkspacePage model configuration", () => {
     expect(markup).not.toContain("质量报告");
   });
 
-  test("renders project persistence save button as disabled while conversion is pending", () => {
+  test("renders project persistence save button as disabled when saving is disabled", () => {
     const markup = renderToStaticMarkup(
       createElement(ProjectPersistenceCard, {
         isBound: false,
-        isPending: true,
+        isDisabled: true,
         message: "生成时会自动创建项目；也可以先手动保存当前工作区。",
         onSave: () => undefined
       })
@@ -70,7 +70,7 @@ describe("WorkspacePage model configuration", () => {
     const markup = renderToStaticMarkup(
       createElement(ProjectPersistenceCard, {
         isBound: true,
-        isPending: false,
+        isDisabled: false,
         message: "当前绑定服务端项目：雨夜来信",
         onSave: () => undefined
       })

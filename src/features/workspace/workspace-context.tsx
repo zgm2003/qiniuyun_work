@@ -67,6 +67,7 @@ export type WorkspaceContextValue = {
   isProviderSettingsPending: boolean;
   isProviderSettingsLoading: boolean;
   isPending: boolean;
+  isServerProjectSaving: boolean;
   drafts: LocalProjectDraft[];
   chapters: ReturnType<typeof parseNovelChapters>;
   chapterOutline: ReturnType<typeof buildChapterOutline>;
@@ -181,6 +182,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [draftMessage, setDraftMessage] = useState("");
   const [serverProjectId, setServerProjectId] = useState<string | null>(null);
   const [serverProjectMessage, setServerProjectMessage] = useState("");
+  const [isServerProjectSaving, setIsServerProjectSaving] = useState(false);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const provider: ProviderName = DEFAULT_PRODUCT_PROVIDER;
   const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
@@ -306,6 +308,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
 
   async function saveCurrentWorkspaceToServer() {
+    if (isServerProjectSaving) {
+      return;
+    }
+
+    setIsServerProjectSaving(true);
     setError("");
     setServerProjectMessage("正在保存到服务端...");
 
@@ -326,6 +333,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const message = serverError instanceof Error ? serverError.message : "服务端项目保存失败";
       setError(message);
       setServerProjectMessage(message);
+    } finally {
+      setIsServerProjectSaving(false);
     }
   }
 
@@ -524,6 +533,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     isProviderSettingsPending,
     isProviderSettingsLoading,
     isPending,
+    isServerProjectSaving,
     drafts,
     chapters,
     chapterOutline,

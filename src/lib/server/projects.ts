@@ -84,7 +84,15 @@ type ProjectRow = RowDataPacket & {
   updated_at: Date;
 };
 
-type ProjectListRow = ProjectRow & {
+type ProjectListBaseRow = RowDataPacket & {
+  id: string;
+  title: string;
+  status: ProjectStatus;
+  created_at: Date;
+  updated_at: Date;
+};
+
+type ProjectListRow = ProjectListBaseRow & {
   latest_run_id: string | null;
   latest_run_project_id: string | null;
   latest_run_provider: ProviderName | null;
@@ -138,6 +146,16 @@ function mapProjectRow(row: ProjectRow): ProjectRecord {
     id: row.id,
     title: row.title,
     sourceText: row.source_text,
+    status: row.status,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString()
+  };
+}
+
+function mapProjectListBaseRow(row: ProjectListBaseRow): Pick<ProjectRecord, "id" | "title" | "status" | "createdAt" | "updatedAt"> {
+  return {
+    id: row.id,
+    title: row.title,
     status: row.status,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString()
@@ -235,7 +253,7 @@ export async function createProject(input: CreateProjectInput, runner?: MysqlQue
 
 export async function listProjects(runner?: MysqlQueryRunner): Promise<ProjectListItem[]> {
   const [rows] = await resolveRunner(runner).query<ProjectListRow[]>(
-    `SELECT p.id, p.title, p.source_text, p.status, p.created_at, p.updated_at,
+    `SELECT p.id, p.title, p.status, p.created_at, p.updated_at,
             gr.id AS latest_run_id,
             gr.project_id AS latest_run_project_id,
             gr.provider AS latest_run_provider,
@@ -256,7 +274,7 @@ export async function listProjects(runner?: MysqlQueryRunner): Promise<ProjectLi
   );
 
   return rows.map((row) => {
-    const project = mapProjectRow(row);
+    const project = mapProjectListBaseRow(row);
     return {
       id: project.id,
       title: project.title,

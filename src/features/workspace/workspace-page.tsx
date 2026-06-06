@@ -138,7 +138,7 @@ export function WorkspacePage() {
 
             <ProjectPersistenceCard
               isBound={Boolean(workspace.serverProjectId)}
-              isPending={workspace.isPending}
+              isDisabled={workspace.isPending || workspace.isServerProjectSaving}
               message={projectLibraryMessage}
               onSave={() => void workspace.saveCurrentWorkspaceToServer()}
             />
@@ -203,12 +203,12 @@ export function WorkspacePage() {
 
 export function ProjectPersistenceCard({
   isBound,
-  isPending,
+  isDisabled,
   message,
   onSave
 }: {
   isBound: boolean;
-  isPending: boolean;
+  isDisabled: boolean;
   message: string;
   onSave: () => void;
 }) {
@@ -222,7 +222,7 @@ export function ProjectPersistenceCard({
         <span className={isBound ? "outline-pill ok" : "outline-pill"}>{stateText}</span>
       </div>
       <p>{message}</p>
-      <button className="secondary-button project-save-button" type="button" disabled={isPending} onClick={onSave}>
+      <button className="secondary-button project-save-button" type="button" disabled={isDisabled} onClick={onSave}>
         保存到项目库
       </button>
     </div>

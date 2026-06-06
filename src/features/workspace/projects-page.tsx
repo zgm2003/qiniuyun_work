@@ -67,8 +67,13 @@ export function ProjectsPage() {
           <h1>服务端项目</h1>
           <p className="lead">保存和加载服务端项目草稿，便于继续打磨小说改编剧本。</p>
         </div>
-        <button className="primary-button" type="button" onClick={() => void saveCurrentWorkspace()}>
-          保存当前工作区
+        <button
+          className="primary-button"
+          type="button"
+          disabled={workspace.isServerProjectSaving}
+          onClick={() => void saveCurrentWorkspace()}
+        >
+          {workspace.isServerProjectSaving ? "正在保存..." : "保存当前工作区"}
         </button>
       </div>
 
