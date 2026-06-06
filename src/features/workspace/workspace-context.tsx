@@ -15,6 +15,8 @@ import {
 import { buildScriptQualityChecklist, type ScriptQualityStatus } from "@/lib/script-quality";
 import { validateScriptYaml, type ScriptValidationError } from "@/lib/script-schema";
 import type { ConversionReport } from "@/lib/mock-converter";
+import { buildModelOptions } from "./model-options";
+import { fetchProviderModels } from "./model-list-client";
 import { buildConvertModelConfig, type RuntimeEnvironment } from "./model-request-config";
 import { DEFAULT_PRODUCT_MODEL, DEFAULT_PRODUCT_PROVIDER } from "./provider-options";
 import { loadProviderSettings, saveProviderSettings } from "./provider-settings-client";
@@ -27,6 +29,8 @@ import {
 import { convertWorkspaceOnServer } from "./workspace-convert-client";
 
 export type ProviderName = "mock" | "openai-compatible";
+
+export type ModelListStatus = "idle" | "loading" | "ready" | "error";
 
 export type WorkspaceContextValue = {
   title: string;
@@ -51,9 +55,15 @@ export type WorkspaceContextValue = {
   setTemperature: (value: number) => void;
   apiKey: string;
   setApiKey: (value: string) => void;
+  modelIds: string[];
+  modelOptions: ReturnType<typeof buildModelOptions>;
+  modelListStatus: ModelListStatus;
+  modelListMessage: string;
   providerSettingsMessage: string;
+  canFetchModels: boolean;
   canSaveProviderSettings: boolean;
   isProductionRuntime: boolean;
+  isModelListPending: boolean;
   isProviderSettingsPending: boolean;
   isProviderSettingsLoading: boolean;
   isPending: boolean;
@@ -74,6 +84,7 @@ export type WorkspaceContextValue = {
   deleteDraft: (draftId: string) => void;
   loadServerProjectIntoWorkspace: (project: ServerProjectDetail) => void;
   saveCurrentWorkspaceToServer: () => Promise<void>;
+  fetchModels: () => Promise<void>;
   loadProviderSettingsFromServer: () => Promise<void>;
   saveProviderSettingsToServer: () => Promise<void>;
   convert: () => void;
@@ -109,6 +120,8 @@ function createDraftId(): string {
 
 const EMPTY_DRAFTS: LocalProjectDraft[] = [];
 const LOCAL_DRAFTS_CHANGED_EVENT = "novel-to-script-ai:local-drafts-changed";
+const MODEL_LIST_DEVELOPMENT_MESSAGE = "填写 API Key 后可临时获取模型列表，便于选择更便宜的模型。";
+const MODEL_LIST_PRODUCTION_MESSAGE = "生产环境使用服务端唯一 AI 配置，不从浏览器获取模型列表。";
 const PROVIDER_SETTINGS_IDLE_MESSAGE = "点击保存会加密 API Key 并写入唯一 AI 配置；不会写入 localStorage 草稿。";
 let cachedDraftsRaw: string | null | undefined;
 let cachedDrafts: LocalProjectDraft[] = EMPTY_DRAFTS;
@@ -174,7 +187,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [model, setModel] = useState(DEFAULT_PRODUCT_MODEL);
   const [temperature, setTemperature] = useState(0.2);
   const [apiKey, setApiKey] = useState("");
+  const [modelIds, setModelIds] = useState<string[]>([]);
+  const [modelListStatus, setModelListStatus] = useState<ModelListStatus>("idle");
+  const [modelListMessage, setModelListMessage] = useState(
+    isProductionRuntime ? MODEL_LIST_PRODUCTION_MESSAGE : MODEL_LIST_DEVELOPMENT_MESSAGE
+  );
   const [providerSettingsMessage, setProviderSettingsMessage] = useState(PROVIDER_SETTINGS_IDLE_MESSAGE);
+  const [isModelListPending, setIsModelListPending] = useState(false);
   const [isProviderSettingsPending, setIsProviderSettingsPending] = useState(false);
   const [isProviderSettingsLoading, setIsProviderSettingsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -198,6 +217,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setReport(null);
     setError("");
     setSourceMessage("已加载样例文本，当前不绑定任何草稿。");
+    setModelIds([]);
+    setModelListStatus("idle");
+    setModelListMessage(isProductionRuntime ? MODEL_LIST_PRODUCTION_MESSAGE : MODEL_LIST_DEVELOPMENT_MESSAGE);
     setDraftMessage("已加载样例，当前不绑定任何草稿。");
     setActiveDraftId(null);
     setServerProjectId(null);
@@ -222,6 +244,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setReport(null);
     setError("");
     setSourceMessage(`已导入 ${imported.fileName}，标题已设为“${imported.title}”。`);
+    setModelIds([]);
+    setModelListStatus("idle");
+    setModelListMessage(isProductionRuntime ? MODEL_LIST_PRODUCTION_MESSAGE : MODEL_LIST_DEVELOPMENT_MESSAGE);
     setDraftMessage("已导入本地文本，当前不绑定任何草稿。");
     setActiveDraftId(null);
     setServerProjectId(null);
@@ -321,6 +346,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       setBaseUrl(settings.baseUrl);
       setModel(settings.model);
+      setModelIds([]);
+      setModelListStatus("idle");
+      setModelListMessage(MODEL_LIST_DEVELOPMENT_MESSAGE);
       setProviderSettingsMessage(`已加载唯一 AI 配置：${settings.baseUrl} · ${settings.model}`);
     } catch (settingsError) {
       const message = settingsError instanceof Error ? settingsError.message : "AI 配置读取失败";
@@ -329,6 +357,41 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setIsProviderSettingsLoading(false);
     }
   }, [isProductionRuntime]);
+
+  async function fetchModels() {
+    if (isProductionRuntime) {
+      setModelIds([]);
+      setModelListStatus("idle");
+      setModelListMessage(MODEL_LIST_PRODUCTION_MESSAGE);
+      return;
+    }
+
+    setError("");
+    setIsModelListPending(true);
+    setModelListStatus("loading");
+    setModelListMessage("正在按当前 Base URL 和 API Key 获取模型列表...");
+
+    try {
+      const models = await fetchProviderModels({
+        baseUrl: baseUrl.trim(),
+        apiKey: apiKey.trim()
+      });
+
+      setModelIds(models);
+      if (models.length > 0 && !model.trim()) {
+        setModel(models[0]);
+      }
+      setModelListStatus("ready");
+      setModelListMessage(`已获取 ${models.length} 个模型。模型列表不入库，保存时只保存当前选中的 model。`);
+    } catch (modelsError) {
+      const message = modelsError instanceof Error ? modelsError.message : "获取模型列表失败";
+      setModelIds([]);
+      setModelListStatus("error");
+      setModelListMessage(message);
+    } finally {
+      setIsModelListPending(false);
+    }
+  }
 
   async function saveProviderSettingsToServer() {
     const trimmedBaseUrl = baseUrl.trim();
@@ -412,7 +475,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
 
   const canConvert = title.trim().length > 0 && novelText.trim().length > 0 && chapterOutline.ready;
+  const canFetchModels = !isProductionRuntime && Boolean(apiKey.trim());
   const canSaveProviderSettings = Boolean(baseUrl.trim()) && Boolean(apiKey.trim()) && Boolean(model.trim());
+  const modelOptions = useMemo(() => buildModelOptions(modelIds, model), [modelIds, model]);
   const validationText = yamlValidation
     ? yamlValidation.ok
       ? "Schema 校验通过，可以导出。"
@@ -447,9 +512,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setTemperature,
     apiKey,
     setApiKey,
+    modelIds,
+    modelOptions,
+    modelListStatus,
+    modelListMessage,
     providerSettingsMessage,
+    canFetchModels,
     canSaveProviderSettings,
     isProductionRuntime,
+    isModelListPending,
     isProviderSettingsPending,
     isProviderSettingsLoading,
     isPending,
@@ -470,6 +541,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     deleteDraft,
     loadServerProjectIntoWorkspace,
     saveCurrentWorkspaceToServer,
+    fetchModels,
     loadProviderSettingsFromServer,
     saveProviderSettingsToServer,
     convert,

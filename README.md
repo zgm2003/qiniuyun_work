@@ -14,7 +14,7 @@
 - 输入校验：少于 3 个章节直接报错，不生成假结果。
 - 剧本生成：产品界面默认使用 OpenAI-compatible 真实 AI 能力。
 - 真实 AI 接口：生产默认调用 OpenAI 兼容 Responses API + Structured Outputs，开发可临时回退 Chat Completions。
-- 模型配置面板：开发/本地调试时填写唯一 AI 配置（base URL、model、temperature、API Key）；生产环境使用服务端配置。
+- 模型配置面板：开发/本地调试时填写唯一 AI 配置（base URL、model、temperature、API Key），可临时获取模型列表挑选更便宜的 model；生产环境使用服务端配置。
 - 本地项目草稿：可在浏览器 localStorage 保存、加载、删除当前小说/YAML/转换报告。
 - 服务端项目草稿：提供项目、剧本版本和生成记录的 MySQL 保存 API，方便跨页面继续打磨。
 - YAML Schema：使用 Zod 定义运行时 Schema，并提供设计说明文档。
@@ -59,7 +59,7 @@ Schema 校验 + 剧本质量清单
 - 剧本结构质量清单，不做 AI 主观剧情评分。
 - 确定性剧本转换器，仅用于测试、CI 和样例输出。
 - OpenAI-compatible 调用编排。
-- 开发/本地调试唯一 AI 配置；生产环境不接受浏览器覆盖 API Key、Base URL 或 model。
+- 开发/本地调试唯一 AI 配置，并支持临时获取模型列表；生产环境不接受浏览器覆盖 API Key、Base URL 或 model。
 - 浏览器本地草稿管理，不保存 API Key 和模型配置。
 - MySQL 服务端项目草稿表不保存 API Key、Base URL、provider、model 或 temperature；唯一 AI 配置单独加密保存。
 - 转换 API。
@@ -134,7 +134,7 @@ OPENAI_COMPATIBLE_API_KEY=your_api_key
 
 生产默认使用 Responses API + Structured Outputs。模型先返回严格 JSON 剧本文档，服务端再转换为 YAML 给作者编辑和导出。开发排查时可以设置 `OPENAI_COMPATIBLE_GENERATION_API=chat-completions` 临时回到旧路径；生产目标是 `responses`。
 
-开发环境下，页面上的“模型配置”面板只维护一套 AI 配置：base URL、model、temperature 和 API Key。生产环境应使用服务端配置，不接受浏览器传入 API Key、Base URL 或 model 覆盖。API Key 加密入库，不写入仓库，也不进入 localStorage 草稿。
+开发环境下，页面上的“模型配置”面板只维护一套 AI 配置：base URL、model、temperature 和 API Key。可以临时调用 `/api/models` 获取当前 Base URL 下的模型列表，方便选择更便宜的 model；模型列表不入库，保存时只保存当前选中的 model。生产环境应使用服务端配置，不接受浏览器传入 API Key、Base URL 或 model 覆盖。API Key 加密入库，不写入仓库，也不进入 localStorage 草稿。
 
 ## MySQL 持久化配置
 
@@ -148,7 +148,7 @@ MySQL 保存服务端项目草稿，但不会替换现有 localStorage 草稿流
 - `POST /api/projects/[projectId]/generation-runs`：保存一次生成运行记录。
 
 初始化 SQL 在 `src/lib/db/schema.sql`。生产建议单独创建本项目数据库和最小权限连接串，不要复用其他项目 root DSN。
-AI 运行时配置只使用 `ai_settings` 单表固定保存一行：Base URL、model、加密 API Key 和健康检查状态；不再拆 `provider` / `model` 两张表。
+AI 运行时配置只使用 `ai_settings` 单表固定保存一行：Base URL、当前选中的 model、加密 API Key 和健康检查状态；不再拆 `provider` / `model` 两张表。临时获取到的模型列表不持久化。
 
 ```env
 MYSQL_DSN=mysql://app_user:app_password@127.0.0.1:3306/qiniuyun
@@ -185,7 +185,7 @@ P5 将小说转剧本 Prompt 拆成版本化模板。运行时只允许固定变
 2. 打开首页。
 3. 点击“导入文本”，选择 `samples/novel-3chapters.txt` 或 `samples/novel-3chapters.md`；也可点击“加载样例”快速恢复。
 4. 确认标题由文件名生成，且“章节大纲预览”显示 3 章以上、每章标题、字数和正文预览。
-5. 本地开发录屏时展示“模型配置”面板：填写 OpenAI-compatible base URL、model、temperature 和 API Key；生产录屏不展示/不填写这些敏感字段。
+5. 本地开发录屏时展示“模型配置”面板：填写 OpenAI-compatible base URL、API Key，点击“获取模型”选择合适 model，再设置 temperature；生产录屏不展示/不填写这些敏感字段。
 6. 点击“转换为 YAML 剧本”。
 7. 展示生成的 YAML、Schema 校验和“剧本质量清单”全部通过。
 8. 展示角色、场景、台词统计。

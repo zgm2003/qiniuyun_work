@@ -61,7 +61,7 @@ npm run build
 
 ### 下一步：唯一 AI 配置加密入库
 
-目标：AI Base URL、model 和 Key 入库；Key 使用 AES-256-GCM 加密，主密钥只来自服务端 env，前端只显示已保存状态。不做多供应商、多模型选择。
+目标：AI Base URL、当前选中的 model 和 Key 入库；Key 使用 AES-256-GCM 加密，主密钥只来自服务端 env，前端只显示已保存状态。不做多供应商。模型列表只临时获取，不单独建表。
 
 
 ## 当前最终演示链路

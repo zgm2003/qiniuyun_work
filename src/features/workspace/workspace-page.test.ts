@@ -81,7 +81,7 @@ describe("WorkspacePage model configuration", () => {
     expect(markup).not.toContain("API Key（仅本次请求）");
     expect(markup).toContain("已保存的 API Key 不会回显");
     expect(markup).toContain(">Base URL<");
-    expect(markup).not.toContain("获取模型");
+    expect(markup).toContain("获取模型");
     expect(markup).not.toContain("Provider");
     expect(markup).toContain("保存唯一配置");
     expect(markup).toContain('class="model-settings-footer"');

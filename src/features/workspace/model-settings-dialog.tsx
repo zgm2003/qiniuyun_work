@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { UiDialog } from "@/components/ui/dialog";
+import { UiSelect } from "@/components/ui/select";
 import { useWorkspace } from "./workspace-context";
 
 type ModelSettingsDialogProps = {
@@ -91,14 +92,36 @@ export function ModelSettingsDialog({ defaultOpen = false }: ModelSettingsDialog
                 <div className="model-field-row">
                   <label className="model-field-main">
                     <span>Model</span>
-                    <input
-                      className="compact-input"
-                      value={workspace.model}
-                      onChange={(event) => workspace.setModel(event.target.value)}
-                      placeholder="gpt-5.5"
-                    />
+                    {workspace.modelIds.length > 0 ? (
+                      <UiSelect
+                        hideLabel
+                        label="Model"
+                        value={workspace.model}
+                        options={workspace.modelOptions}
+                        onChange={workspace.setModel}
+                      />
+                    ) : (
+                      <input
+                        className="compact-input"
+                        value={workspace.model}
+                        onChange={(event) => workspace.setModel(event.target.value)}
+                        placeholder="gpt-5.5"
+                      />
+                    )}
                   </label>
+                  <button
+                    className="secondary-button model-fetch-button"
+                    type="button"
+                    disabled={!workspace.canFetchModels || workspace.isModelListPending}
+                    onClick={workspace.fetchModels}
+                  >
+                    {workspace.isModelListPending ? "获取中..." : "获取模型"}
+                  </button>
                 </div>
+
+                <p className={workspace.modelListStatus === "error" ? "model-list-message error" : "model-list-message"}>
+                  {workspace.modelListMessage}
+                </p>
 
                 <label>
                   <span>API Key</span>

@@ -954,7 +954,7 @@ input::placeholder {
 
 .model-field-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 112px;
   gap: 12px;
   align-items: end;
 }
@@ -963,9 +963,16 @@ input::placeholder {
   min-width: 0;
 }
 
+.model-fetch-button,
 .model-settings-save-button {
   min-height: var(--model-control-height);
   white-space: nowrap;
+}
+
+.model-fetch-button {
+  width: 100%;
+  padding-right: 12px;
+  padding-left: 12px;
 }
 
 .model-settings-footer {
@@ -2114,7 +2121,8 @@ html.dark input::placeholder {
   }
 
   .model-settings-actions,
-  .model-settings-save-button {
+  .model-settings-save-button,
+  .model-fetch-button {
     width: 100%;
   }
 

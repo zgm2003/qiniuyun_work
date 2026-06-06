@@ -63,12 +63,12 @@ samples/novel-3chapters.txt
 
 展示“模型配置”区域：
 
-- 本地开发录屏可以填写 base URL、model、temperature、API Key；生产录屏使用服务端 AI 配置，不展示也不填写浏览器侧 API Key/Base URL/model。
-- 配置固定为 OpenAI-compatible；不做供应商下拉，也不做模型列表选择。
+- 本地开发录屏可以填写 base URL、API Key，点击“获取模型”选择 model，再设置 temperature；生产录屏使用服务端 AI 配置，不展示也不填写浏览器侧 API Key/Base URL/model。
+- 配置固定为 OpenAI-compatible；不做供应商下拉。模型列表只临时获取，用来选择当前要保存的 model。
 
 强调：
 
-- 本地开发调试 API Key 会加密保存到唯一 AI 配置；生产环境由服务端持有 API Key。
+- 本地开发调试 API Key 会加密保存到唯一 AI 配置；临时获取到的模型列表不入库；生产环境由服务端持有 API Key。
 - 不写入仓库。
 - 不保存到 localStorage 草稿。
 
