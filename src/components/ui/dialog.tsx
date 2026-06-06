@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { UiButton } from "./button";
 
 type UiDialogProps = {
@@ -16,7 +17,7 @@ export function UiDialog({ open, title, description, children, onClose }: UiDial
     return null;
   }
 
-  return (
+  const dialog = (
     <div className="ui-dialog-backdrop" role="presentation">
       <section className="ui-dialog" role="dialog" aria-modal="true" aria-label={title}>
         <div className="ui-dialog-head">
@@ -32,4 +33,10 @@ export function UiDialog({ open, title, description, children, onClose }: UiDial
       </section>
     </div>
   );
+
+  if (typeof document !== "undefined" && document.body) {
+    return createPortal(dialog, document.body);
+  }
+
+  return dialog;
 }
