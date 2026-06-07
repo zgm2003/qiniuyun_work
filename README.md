@@ -1,3 +1,5 @@
+介绍视频url：https://www.bilibili.com/video/BV1qQEs6JE2F/
+
 # AI 小说转剧本工具
 
 把 3 个章节以上的小说文本转换为结构化 YAML 剧本初稿，并提供 YAML Schema 文档、校验和导出能力。
