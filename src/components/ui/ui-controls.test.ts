@@ -132,4 +132,14 @@ describe("shared UI control CSS", () => {
     expect(selectTrigger).not.toContain("min-height: 42px");
     expect(compactInputBlocks.some((block) => block.includes("height: var(--model-control-height)"))).toBe(true);
   });
+
+  test("uses exact shared height for model dialog action buttons", () => {
+    const modelFetchButton = cssBlock(".model-fetch-button");
+    const modelSaveButton = cssBlock(".model-settings-save-button");
+
+    expect(modelFetchButton).toContain("height: var(--model-control-height)");
+    expect(modelSaveButton).toContain("height: var(--model-control-height)");
+    expect(modelFetchButton).not.toContain("min-height: var(--model-control-height)");
+    expect(modelSaveButton).not.toContain("min-height: var(--model-control-height)");
+  });
 });

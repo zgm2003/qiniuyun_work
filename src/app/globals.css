@@ -634,10 +634,12 @@ a {
     var(--card);
 }
 
-.output-panel,
+.output-panel {
+  position: static;
+}
+
 .route-side-panel {
-  position: sticky;
-  top: 92px;
+  position: static;
 }
 
 .conversion-panel {
@@ -966,12 +968,13 @@ input::placeholder {
 
 .model-fetch-button,
 .model-settings-save-button {
-  min-height: var(--model-control-height);
+  height: var(--model-control-height);
   white-space: nowrap;
 }
 
 .model-fetch-button {
   width: 100%;
+  height: var(--model-control-height);
   padding-right: 12px;
   padding-left: 12px;
 }
@@ -996,6 +999,7 @@ input::placeholder {
 }
 
 .model-settings-save-button {
+  height: var(--model-control-height);
   padding-right: 18px;
   padding-left: 18px;
 }
@@ -1359,9 +1363,7 @@ input::placeholder {
 .chapter-outline-list {
   display: grid;
   gap: 10px;
-  max-height: 410px;
   margin: 14px 0 0;
-  overflow: auto;
   padding: 0;
   list-style: none;
 }

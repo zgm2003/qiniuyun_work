@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
@@ -157,5 +158,33 @@ describe("ScriptPage flow", () => {
     expect(markup).toContain("去生成 YAML");
     expect(markup).toContain("导出 YAML");
     expect(markup).not.toContain("故意删除");
+  });
+});
+
+describe("WorkspacePage layout CSS", () => {
+  const css = readFileSync(new URL("../../app/globals.css", import.meta.url), "utf8");
+
+  function cssBlock(selector: string): string {
+    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`).exec(css);
+    if (!match) {
+      throw new Error(`${selector} CSS block is missing`);
+    }
+
+    return match[1];
+  }
+
+  test("keeps the workspace side panel aligned with the input column instead of sticky drifting", () => {
+    const routeSidePanel = cssBlock(".route-side-panel");
+
+    expect(routeSidePanel).toContain("position: static");
+    expect(routeSidePanel).not.toContain("position: sticky");
+  });
+
+  test("lets the chapter outline expand with the page instead of clipping inside a hidden nested scroller", () => {
+    const chapterOutlineList = cssBlock(".chapter-outline-list");
+
+    expect(chapterOutlineList).not.toContain("max-height");
+    expect(chapterOutlineList).not.toContain("overflow");
   });
 });

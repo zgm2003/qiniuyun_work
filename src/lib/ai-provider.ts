@@ -266,7 +266,7 @@ async function resolveOpenAIRequestConfig(
   env: ProviderEnvironment,
   modelConfig?: RequestModelConfig
 ): Promise<OpenAICompatibleRequestConfig> {
-  if (env.NODE_ENV !== "production") {
+  if (env.NODE_ENV !== "production" && (!modelConfig || modelConfig.apiKey?.trim())) {
     return resolveEnvOpenAIConfig(env, modelConfig);
   }
 
