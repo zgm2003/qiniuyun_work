@@ -4,7 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 import { ModelSettingsDialog } from "./model-settings-dialog";
 import { ScriptPage } from "./script-page";
 import { WorkbenchShell } from "./workbench-shell";
-import { ProjectPersistenceCard, WorkspacePage } from "./workspace-page";
+import { getConversionButtonState, ProjectPersistenceCard, WorkspacePage } from "./workspace-page";
 import { WorkspaceProvider } from "./workspace-context";
 
 vi.mock("next/navigation", () => ({
@@ -80,6 +80,20 @@ describe("WorkspacePage model configuration", () => {
     expect(markup).toContain("当前绑定服务端项目：雨夜来信");
     expect(markup).toContain('class="outline-pill ok"');
     expect(markup).not.toContain("disabled");
+  });
+
+  test("disables conversion while a server project save is in flight", () => {
+    expect(
+      getConversionButtonState({
+        canConvert: true,
+        isPending: false,
+        isServerProjectSaving: true,
+        minimumChapterText: "3 章"
+      })
+    ).toEqual({
+      disabled: true,
+      text: "正在保存项目..."
+    });
   });
 
   test("places model settings in the top navigation", () => {

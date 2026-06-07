@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { buildChapterOutline } from "@/lib/chapter-outline";
 import { parseNovelChapters } from "@/lib/chapters";
 import { SAMPLE_NOVEL, SAMPLE_TITLE } from "@/lib/demo-sample";
@@ -95,6 +95,23 @@ export type WorkspaceContextValue = {
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
+type ServerProjectSaveLock = {
+  current: boolean;
+};
+
+export function claimServerProjectSaveLock(lock: ServerProjectSaveLock): boolean {
+  if (lock.current) {
+    return false;
+  }
+
+  lock.current = true;
+  return true;
+}
+
+export function releaseServerProjectSaveLock(lock: ServerProjectSaveLock): void {
+  lock.current = false;
+}
+
 function formatValidationErrors(errors: ScriptValidationError[]): string {
   return errors.map((error) => `${error.path}: ${error.message}`).join("\n");
 }
@@ -183,6 +200,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [serverProjectId, setServerProjectId] = useState<string | null>(null);
   const [serverProjectMessage, setServerProjectMessage] = useState("");
   const [isServerProjectSaving, setIsServerProjectSaving] = useState(false);
+  const serverProjectSaveLock = useRef(false);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const provider: ProviderName = DEFAULT_PRODUCT_PROVIDER;
   const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
@@ -308,7 +326,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
 
   async function saveCurrentWorkspaceToServer() {
-    if (isServerProjectSaving) {
+    if (!claimServerProjectSaveLock(serverProjectSaveLock)) {
       return;
     }
 
@@ -334,6 +352,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setError(message);
       setServerProjectMessage(message);
     } finally {
+      releaseServerProjectSaveLock(serverProjectSaveLock);
       setIsServerProjectSaving(false);
     }
   }
@@ -433,15 +452,33 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
 
   function convert() {
+    if (!claimServerProjectSaveLock(serverProjectSaveLock)) {
+      setServerProjectMessage("正在保存到服务端，请稍后生成。");
+      return;
+    }
+
     setError("");
+    setIsServerProjectSaving(true);
     startTransition(async () => {
+      let savedProject: ServerProjectDetail;
+
       try {
-        const savedProject = serverProjectId
+        savedProject = serverProjectId
           ? await updateServerProject(serverProjectId, title, novelText)
           : await createServerProject(title, novelText);
         setServerProjectId(savedProject.id);
         setServerProjectMessage(`已绑定服务端项目：${savedProject.title}，生成记录和 YAML 版本会写入数据库。`);
+      } catch (convertError) {
+        const message = convertError instanceof Error ? convertError.message : "转换失败";
+        setError(message);
+        setServerProjectMessage(message);
+        return;
+      } finally {
+        releaseServerProjectSaveLock(serverProjectSaveLock);
+        setIsServerProjectSaving(false);
+      }
 
+      try {
         const modelConfig = buildConvertModelConfig({
           provider,
           baseUrl,

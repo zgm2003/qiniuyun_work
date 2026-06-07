@@ -19,11 +19,12 @@ export function WorkspacePage() {
     : workspace.chapterOutline.ready
       ? "准备生成"
       : `还差 ${workspace.chapterOutline.missingChapterCount} 章`;
-  const conversionButtonText = workspace.isPending
-    ? "正在生成 YAML..."
-    : workspace.canConvert
-      ? "生成 YAML 剧本"
-      : `至少需要 ${minimumChapterText}`;
+  const conversionButtonState = getConversionButtonState({
+    canConvert: workspace.canConvert,
+    isPending: workspace.isPending,
+    isServerProjectSaving: workspace.isServerProjectSaving,
+    minimumChapterText
+  });
 
   function openFileImport() {
     fileInputRef.current?.click();
@@ -146,10 +147,10 @@ export function WorkspacePage() {
             <button
               className="primary-button conversion-button"
               type="button"
-              disabled={!workspace.canConvert || workspace.isPending}
+              disabled={conversionButtonState.disabled}
               onClick={workspace.convert}
             >
-              {conversionButtonText}
+              {conversionButtonState.text}
             </button>
 
             {hasGeneratedYaml ? (
@@ -227,6 +228,44 @@ export function ProjectPersistenceCard({
       </button>
     </div>
   );
+}
+
+export function getConversionButtonState({
+  canConvert,
+  isPending,
+  isServerProjectSaving,
+  minimumChapterText
+}: {
+  canConvert: boolean;
+  isPending: boolean;
+  isServerProjectSaving: boolean;
+  minimumChapterText: string;
+}): { disabled: boolean; text: string } {
+  if (isServerProjectSaving) {
+    return {
+      disabled: true,
+      text: "正在保存项目..."
+    };
+  }
+
+  if (isPending) {
+    return {
+      disabled: true,
+      text: "正在生成 YAML..."
+    };
+  }
+
+  if (!canConvert) {
+    return {
+      disabled: true,
+      text: `至少需要 ${minimumChapterText}`
+    };
+  }
+
+  return {
+    disabled: false,
+    text: "生成 YAML 剧本"
+  };
 }
 
 function StepPill({ index, label, tone = "light" }: { index: string; label: string; tone?: "dark" | "light" }) {
